@@ -1,0 +1,1557 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<link rel="icon" href="site-icon-32.png" type="image/png" sizes="32x32">
+<link rel="icon" href="site-icon-16.png" type="image/png" sizes="16x16">
+<link rel="apple-touch-icon" href="site-icon-180.png">
+<link rel="shortcut icon" href="site-icon-32.png">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Design drone formations from text, images and 3D models. Add lighting effects, organize scenes and preview your drone show in SkySculpt Studio.">
+<title>SkySculpt AI — Drone Show Design Studio</title>
+<!-- English, calmer-motion version -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --void:#05060B;
+    --panel:#0D0F17;
+    --panel-2:#12141F;
+    --line:#1E212E;
+    --ink:#F1F2F7;
+    --muted:#8A8FA6;
+    --muted-dim:#4B4F60;
+    --cyan:#2DE0E8;
+    --blue:#5B8CFF;
+    --purple:#A85BEA;
+    --cyan-dim:rgba(45,224,232,0.12);
+    --purple-dim:rgba(168,91,234,0.12);
+    --display:'Orbitron', sans-serif;
+    --body:'Inter', sans-serif;
+    --mono:'JetBrains Mono', monospace;
+    --maxw:1180px;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html{scroll-behavior:smooth;}
+  body{
+    background:var(--void); color:var(--ink); font-family:var(--body);
+    line-height:1.6; -webkit-font-smoothing:antialiased; overflow-x:hidden;
+  }
+  #ambientCanvas{
+    position:fixed; inset:0; width:100%; height:100%; z-index:0; pointer-events:none; opacity:0.85;
+  }
+  a{color:inherit; text-decoration:none;}
+  .wrap{ max-width:var(--maxw); margin:0 auto; padding:0 32px; position:relative; z-index:1;}
+  section{ position:relative; z-index:1;}
+  h1,h2,h3{ font-family:var(--display); font-weight:700; letter-spacing:0.01em; color:var(--ink);}
+
+  .eyebrow{
+    font-family:var(--mono); font-size:11.5px; letter-spacing:0.18em; text-transform:uppercase;
+    display:inline-flex; align-items:center; gap:9px; margin-bottom:16px;
+  }
+  .eyebrow::before{ content:""; width:6px; height:6px; border-radius:50%; }
+  .e-cyan{ color:var(--cyan);} .e-cyan::before{ background:var(--cyan); box-shadow:0 0 8px 2px var(--cyan-dim);}
+  .e-blue{ color:var(--blue);} .e-blue::before{ background:var(--blue); box-shadow:0 0 8px 2px rgba(91,140,255,0.25);}
+  .e-purple{ color:var(--purple);} .e-purple::before{ background:var(--purple); box-shadow:0 0 8px 2px var(--purple-dim);}
+
+  .btn{
+    font-family:var(--body); font-weight:600; font-size:14.5px; padding:13px 26px; border-radius:999px;
+    border:1px solid var(--line); display:inline-flex; align-items:center; gap:8px; cursor:pointer;
+    transition:transform .18s ease, border-color .18s ease, background .18s ease;
+    background:transparent; color:var(--ink);
+  }
+  .btn-primary{ background:linear-gradient(90deg, var(--cyan), var(--blue)); border-color:transparent; color:#05060B;}
+  .btn-primary:hover{ transform:translateY(-2px); }
+  .btn-ghost:hover{ border-color:var(--muted); transform:translateY(-2px);}
+
+  /* NAV */
+  header{ position:sticky; top:0; z-index:60; background:rgba(5,6,11,0.78); backdrop-filter:blur(10px); border-bottom:1px solid var(--line);}
+  nav{ display:flex; align-items:center; justify-content:space-between; padding:16px 32px; max-width:var(--maxw); margin:0 auto;}
+  .logo{ font-family:var(--display); font-weight:700; font-size:18px; display:flex; align-items:center; gap:2px;}
+  .logo .ai{ background:linear-gradient(90deg, var(--cyan), var(--purple)); -webkit-background-clip:text; background-clip:text; color:transparent;}
+  .nav-links{ display:flex; gap:30px; font-size:14px; color:var(--muted);}
+  .nav-links a:hover{ color:var(--ink); }
+  @media (max-width:760px){ .nav-links{ display:none;} }
+
+  /* HERO */
+  .hero{ padding:88px 0 60px; position:relative;}
+  .hero-mark-holder{ display:flex; justify-content:center; margin-bottom:8px;}
+  #cubeSvg{ animation: heroSway 6.5s ease-in-out infinite alternate; transform-box:fill-box; transform-origin:center;}
+  @keyframes heroSway{ 0%{ transform:rotate(-2deg);} 100%{ transform:rotate(2deg);} }
+  .hero-content{ position:relative; z-index:2; max-width:820px; margin:0 auto; text-align:center;}
+  .hero h1{ font-size:clamp(30px,5vw,52px); line-height:1.18; margin-bottom:22px;}
+  .hero p.sub{ font-size:17.5px; color:var(--muted); max-width:600px; margin:0 auto 34px; line-height:1.65;}
+  .hero-cta{ display:flex; gap:14px; justify-content:center; flex-wrap:wrap;}
+  .scroll-cue{ display:flex; justify-content:center; margin-top:56px; font-family:var(--mono); font-size:11px; letter-spacing:.14em; color:var(--muted-dim); text-transform:uppercase;}
+  @media (prefers-reduced-motion: reduce){ #cubeSvg{ animation:none;} }
+
+  /* SECTION SHELL */
+  .section{ padding:96px 0;}
+  .section-head{ max-width:640px; margin:0 auto 56px; text-align:center;}
+  .section-head h2{ font-size:clamp(24px,3.6vw,34px); line-height:1.25;}
+
+  /* FEATURE ROW (image + text alternating) */
+  .feature-row{ display:grid; grid-template-columns:1fr 1fr; gap:64px; align-items:center;}
+  .feature-row.reverse{ direction:rtl; }
+  .feature-row.reverse > *{ direction:ltr; }
+  @media (max-width:880px){ .feature-row{ grid-template-columns:1fr; gap:40px;} .feature-row.reverse{ direction:ltr;} }
+
+  .visual-panel{
+    background:var(--panel); border:1px solid var(--line); border-radius:20px;
+    aspect-ratio:4/3.1; position:relative; overflow:hidden;
+    transition:transform .25s ease, box-shadow .25s ease, border-color .25s ease;
+    will-change:transform;
+  }
+  .visual-panel.tilt-active{ transition:transform .08s linear; }
+
+  /* SCROLL FLIGHT PATH — a small drone travels down the page as you scroll */
+  .flight-path{
+    position:fixed; left:26px; top:130px; bottom:130px; width:2px; z-index:40;
+    background:linear-gradient(180deg, var(--cyan), var(--blue) 50%, var(--purple));
+    opacity:0.16; pointer-events:none;
+  }
+  .flight-dot{
+    position:absolute; left:50%; top:0; width:9px; height:9px; margin-left:-4.5px; border-radius:50%;
+    background:var(--cyan); box-shadow:0 0 10px 2px rgba(45,224,232,0.6), 0 0 0 3px rgba(45,224,232,0.08);
+    transition:background .3s ease, box-shadow .3s ease;
+  }
+  @media (max-width:960px){ .flight-path{ display:none; } }
+  @media (prefers-reduced-motion: reduce){ .flight-dot{ transition:none; } }
+  .visual-panel canvas{ width:100%; height:100%; display:block;}
+  .visual-caption{
+    position:absolute; bottom:14px; left:16px; font-family:var(--mono); font-size:10.5px;
+    letter-spacing:.1em; text-transform:uppercase; color:var(--muted-dim);
+  }
+
+  .feature-text h2{ font-size:clamp(22px,3vw,30px); margin-bottom:18px; line-height:1.3;}
+  .feature-list{ display:flex; flex-direction:column; gap:14px;}
+  .feature-list li{ list-style:none; display:flex; gap:12px; font-size:15px; color:#C7CAD8; line-height:1.55;}
+  .feature-list .marker{ flex:0 0 auto; width:6px; height:6px; border-radius:50%; margin-top:8px; background:var(--cyan); box-shadow:0 0 6px 1px var(--cyan-dim);}
+
+  /* HOW IT WORKS */
+  .how-panel{
+    background:linear-gradient(180deg, var(--panel), var(--panel-2)); border:1px solid var(--line);
+    border-radius:24px; padding:60px 44px; position:relative; overflow:hidden;
+  }
+  .how-row{ display:flex; justify-content:space-between; align-items:flex-start; gap:10px; flex-wrap:wrap; position:relative; z-index:1;}
+  .how-step{ width:22%; min-width:170px; text-align:center;}
+  .how-num{ font-family:var(--mono); font-size:12px; color:var(--muted-dim); letter-spacing:.1em; margin-bottom:14px;}
+  .how-badge{
+    width:64px; height:64px; border-radius:50%; margin:0 auto 16px; background:var(--void); border:1px solid var(--line);
+    display:flex; align-items:center; justify-content:center; color:var(--cyan);
+  }
+  .how-badge svg{ width:26px; height:26px;}
+  .how-label{ font-family:var(--display); font-weight:600; font-size:14.5px; line-height:1.4;}
+  .how-track{ position:absolute; top:118px; left:60px; right:60px; height:1px; background:var(--line); z-index:0;}
+  @media (max-width:820px){ .how-row{ flex-direction:column; align-items:center; gap:36px;} .how-step{ width:100%;} .how-track{ display:none;} }
+
+  /* FEATURES GRID (unused fallback) */
+  .stat-row{ display:flex; justify-content:center; gap:60px; margin-top:20px; flex-wrap:wrap;}
+  .stat{ text-align:center;}
+  .stat .n{ font-family:var(--display); font-size:30px; font-weight:700; color:var(--cyan);}
+  .stat .l{ font-family:var(--mono); font-size:11px; color:var(--muted-dim); text-transform:uppercase; letter-spacing:.08em; margin-top:6px;}
+
+  /* CLOSING */
+  .closing{ padding:110px 0 120px; text-align:center;}
+  .closing h2{ font-size:clamp(28px,4.4vw,44px); max-width:760px; margin:20px auto 22px; line-height:1.18;}
+  .closing p{ color:var(--muted); font-size:16px; max-width:560px; margin:0 auto 34px; line-height:1.65;}
+
+  footer{ border-top:1px solid var(--line); padding:34px 0;}
+  .footer-row{ display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:14px;}
+  .footer-row .copy{ font-size:13px; color:var(--muted-dim); font-family:var(--mono);}
+  .footer-row .email{ font-size:13px; color:var(--muted); font-family:var(--mono); }
+  .footer-row .email:hover{ color:var(--cyan); }
+
+  .reveal{ opacity:0; transform:translateY(18px); transition:opacity .7s ease, transform .7s ease;}
+  .reveal.in{ opacity:1; transform:none;}
+
+  @media (prefers-reduced-motion: reduce){ *{ animation-duration:.01ms !important; transition-duration:.01ms !important;} }
+  /* Studio entry: preserve the existing website identity. */
+  nav{gap:18px}.nav-links{gap:22px}.nav-start{padding:10px 18px;white-space:nowrap;font-size:13px}
+  a:focus-visible{outline:2px solid var(--cyan);outline-offset:5px}
+  @media(max-width:960px){.nav-links{display:none}}
+  @media(max-width:480px){nav{padding:14px 18px;gap:10px}.logo{font-size:15px}.nav-start{padding:9px 12px;font-size:12px}.wrap{padding:0 22px}}
+</style>
+</head>
+<body>
+
+<canvas id="ambientCanvas"></canvas>
+<div class="flight-path" id="flightPath" aria-hidden="true">
+  <div class="flight-line"></div>
+  <div class="flight-dot" id="flightDot"></div>
+</div>
+
+<header>
+  <nav>
+    <div class="logo">
+      <svg id="navMark" viewBox="0 0 60 60" width="26" height="26" style="margin-right:2px; overflow:visible;">
+        <circle cx="30" cy="10" r="3.4" fill="#eaf6ff"/>
+        <circle cx="12" cy="22" r="2.6" fill="#22D9D0"/>
+        <circle cx="48" cy="22" r="2.6" fill="#8B6FF0"/>
+        <circle cx="30" cy="34" r="2.6" fill="#5B8CFF"/>
+        <circle cx="12" cy="46" r="2.2" fill="#22D9D0"/>
+        <circle cx="48" cy="46" r="2.2" fill="#8B6FF0"/>
+        <line x1="30" y1="10" x2="12" y2="22" stroke="#22D9D0" stroke-width="1" opacity="0.6"/>
+        <line x1="30" y1="10" x2="48" y2="22" stroke="#8B6FF0" stroke-width="1" opacity="0.6"/>
+        <line x1="12" y1="22" x2="30" y2="34" stroke="#5B8CFF" stroke-width="1" opacity="0.6"/>
+        <line x1="48" y1="22" x2="30" y2="34" stroke="#5B8CFF" stroke-width="1" opacity="0.6"/>
+        <line x1="12" y1="22" x2="12" y2="46" stroke="#22D9D0" stroke-width="1" opacity="0.6"/>
+        <line x1="48" y1="22" x2="48" y2="46" stroke="#8B6FF0" stroke-width="1" opacity="0.6"/>
+        <line x1="30" y1="34" x2="12" y2="46" stroke="#5B8CFF" stroke-width="1" opacity="0.6"/>
+        <line x1="30" y1="34" x2="48" y2="46" stroke="#5B8CFF" stroke-width="1" opacity="0.6"/>
+      </svg>
+      Skysculpt<span class="ai">ai</span>
+    </div>
+    <div class="nav-links">
+      <a href="#how">How It Works</a>
+      <a href="#models-3d">3D Models</a>
+      <a href="#ai-distribution">Drone Spacing</a>
+      <a href="#export">Export</a>
+    </div>
+    <a class="btn btn-primary nav-start" href="studio/">Request access <span aria-hidden="true">↗</span></a>
+  </nav>
+</header>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="wrap hero-content">
+    <div class="hero-mark-holder">
+      <svg id="cubeSvg" viewBox="0 0 700 560" style="width:100%; max-width:400px; overflow:visible;">
+        <defs>
+          <filter id="glow" x="-200%" y="-200%" width="500%" height="500%">
+            <feGaussianBlur stdDeviation="3.2" result="b"/>
+            <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+          <filter id="glowStrong" x="-300%" y="-300%" width="700%" height="700%">
+            <feGaussianBlur stdDeviation="6" result="b"/>
+            <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+        </defs>
+        <g id="edgesGroup" opacity="0"></g>
+        <g id="nodesGroup"></g>
+      </svg>
+    </div>
+    <span class="eyebrow e-cyan" style="justify-content:center; display:inline-flex;">Drone Show Design Studio</span>
+    <h1>From Text, Images and 3D Models<br>to Drone Formations in Minutes</h1>
+    <p class="sub">Create drone formations from text, images and 3D models. Shape the light with colors and effects, then connect your scenes into a show.</p>
+    <div class="hero-cta">
+      <a href="studio/" class="btn btn-primary">Request access <span aria-hidden="true">→</span></a>
+      <a href="#how" class="btn btn-ghost">See How It Works</a>
+    </div>
+  </div>
+  <div class="scroll-cue">Scroll</div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section class="section" id="how">
+  <div class="wrap">
+    <div class="section-head reveal">
+      <span class="eyebrow e-blue">Process</span>
+      <h2>From Your Idea to a Show, in 4 Steps</h2>
+    </div>
+    <div class="how-panel reveal">
+      <div class="how-track"></div>
+      <svg width="0" height="0" style="position:absolute"><defs>
+        <path id="flowPath" d="M 60 118 L 1040 118"/>
+      </defs></svg>
+      <div class="how-row">
+        <div class="how-step">
+          <div class="how-num">Step 01</div>
+          <div class="how-badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="4" width="18" height="15" rx="2"/><circle cx="8.5" cy="10" r="1.5"/><path d="M3 16l5-5 4 4 3-3 6 6"/></svg></div>
+          <div class="how-label">Start with Text,<br>an Image or a 3D Model</div>
+        </div>
+        <div class="how-step">
+          <div class="how-num">Step 02</div>
+          <div class="how-badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 6h11M4 12h16M4 18h7"/><circle cx="17" cy="6" r="1.6"/><circle cx="9" cy="18" r="1.6"/></svg></div>
+          <div class="how-label">Set Your Drone Count<br>and Formation Size</div>
+        </div>
+        <div class="how-step">
+          <div class="how-num">Step 03</div>
+          <div class="how-badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 3l1.8 4.6L18 9l-4.2 1.4L12 15l-1.8-4.6L6 9l4.2-1.4z"/></svg></div>
+          <div class="how-label">Generate &amp;<br>Add Your Effects</div>
+        </div>
+        <div class="how-step">
+          <div class="how-num">Step 04</div>
+          <div class="how-badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 3v12m0 0l-4-4m4 4l4-4"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg></div>
+          <div class="how-label">Connect Scenes<br>&amp; Preview Your Show</div>
+        </div>
+      </div>
+      <svg viewBox="0 0 1100 20" style="position:absolute; top:110px; left:0; width:100%; height:20px; pointer-events:none; z-index:0;">
+        <circle r="4" fill="#2DE0E8">
+          <animateMotion dur="4.5s" repeatCount="indefinite" path="M 60 8 L 1040 8"/>
+          <animate attributeName="opacity" values="0;1;1;0" keyTimes="0;0.05;0.9;1" dur="4.5s" repeatCount="indefinite"/>
+        </circle>
+      </svg>
+    </div>
+  </div>
+</section>
+
+<!-- GENERAL -->
+<section class="section" id="general">
+  <div class="wrap">
+    <div class="feature-row reveal">
+      <div class="visual-panel"><canvas id="cnvGeneral"></canvas><div class="visual-caption">formations · colors · transitions</div></div>
+      <div class="feature-text">
+        <span class="eyebrow e-cyan">Platform Benefits</span>
+        <h2>Design Faster.<br>Decide with Confidence.</h2>
+        <ul class="feature-list">
+          <li><span class="marker"></span>Explore different drone counts and design variations</li>
+          <li><span class="marker"></span>See formation dimensions and minimum spacing as you design</li>
+          <li><span class="marker"></span>Preview individual scenes and the transitions between them</li>
+          <li><span class="marker"></span>Cuts design time from hours to minutes</li>
+          <li><span class="marker"></span>Save scenes, add lighting effects and arrange your show timeline</li>
+          <li><span class="marker"></span>Enables faster preparation of quotes and client proposals</li>
+          <li><span class="marker"></span>Built for professional drone show companies</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- TEXT -->
+<section class="section" id="text-feature">
+  <div class="wrap">
+    <div class="feature-row reverse reveal">
+      <div class="visual-panel"><canvas id="cnvText"></canvas><div class="visual-caption">text → formation</div></div>
+      <div class="feature-text">
+        <span class="eyebrow e-blue">Text to Formation</span>
+        <h2>Every Word,<br>a Formation</h2>
+        <ul class="feature-list">
+          <li><span class="marker" style="background:var(--blue); box-shadow:0 0 6px 1px rgba(91,140,255,0.3)"></span>Converts text into drone formations</li>
+          <li><span class="marker" style="background:var(--blue); box-shadow:0 0 6px 1px rgba(91,140,255,0.3)"></span>Supports multiple languages, with adjustable letter and word spacing</li>
+          <li><span class="marker" style="background:var(--blue); box-shadow:0 0 6px 1px rgba(91,140,255,0.3)"></span>Choose outline or single-line fonts, with control over drones per letter</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- IMAGES & LOGOS -->
+<section class="section" id="images-feature">
+  <div class="wrap">
+    <div class="feature-row reveal">
+      <div class="visual-panel"><canvas id="cnvLogo"></canvas><div class="visual-caption">outline ⇄ fill</div></div>
+      <div class="feature-text">
+        <span class="eyebrow e-purple">Image & Logo Input</span>
+        <h2>Your Logo,<br>in the Sky</h2>
+        <ul class="feature-list">
+          <li><span class="marker" style="background:var(--purple); box-shadow:0 0 6px 1px var(--purple-dim)"></span>Converts logos and images into drone formations</li>
+          <li><span class="marker" style="background:var(--purple); box-shadow:0 0 6px 1px var(--purple-dim)"></span>Preserves the most important features of the design</li>
+          <li><span class="marker" style="background:var(--purple); box-shadow:0 0 6px 1px var(--purple-dim)"></span>Line art and logo modes for clear outlines and defining details</li>
+          <li><span class="marker" style="background:var(--purple); box-shadow:0 0 6px 1px var(--purple-dim)"></span>Photo surfaces with colors sampled from your image</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 3D MODELS -->
+<section class="section" id="models-3d">
+  <div class="wrap">
+    <div class="feature-row reverse reveal">
+      <div class="visual-panel"><canvas id="cnv3d"></canvas><div class="visual-caption">3D model · illuminated formation</div></div>
+      <div class="feature-text">
+        <span class="eyebrow e-cyan">3D to Drone Formation</span>
+        <h2>Give Your Ideas<br>a New Dimension</h2>
+        <ul class="feature-list">
+          <li><span class="marker"></span>Import GLB, OBJ or STL models, or explore the included 3D examples</li>
+          <li><span class="marker"></span>Choose surface coverage or the curves that define your object</li>
+          <li><span class="marker"></span>Focuses on the features that make an object easily recognizable</li>
+          <li><span class="marker"></span>Automatically simplifies complex models for use in drone shows</li>
+          <li><span class="marker"></span>Adapt the level of detail to your drone count and review the result in 3D</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- AI DISTRIBUTION -->
+<section class="section" id="ai-distribution">
+  <div class="wrap">
+    <div class="feature-row reveal">
+      <div class="visual-panel"><canvas id="cnvAI"></canvas><div class="visual-caption">safety distance · optimized</div></div>
+      <div class="feature-text">
+        <span class="eyebrow e-blue">Drone Distribution &amp; Spacing</span>
+        <h2>Precision That<br>Designs Itself</h2>
+        <ul class="feature-list">
+          <li><span class="marker" style="background:var(--blue); box-shadow:0 0 6px 1px rgba(91,140,255,0.3)"></span>Automatic drone distribution across curves and surfaces</li>
+          <li><span class="marker" style="background:var(--blue); box-shadow:0 0 6px 1px rgba(91,140,255,0.3)"></span>Automatically adapts to the available number of drones</li>
+          <li><span class="marker" style="background:var(--blue); box-shadow:0 0 6px 1px rgba(91,140,255,0.3)"></span>Enforces a minimum 1.5 m spacing in generated formations</li>
+          <li><span class="marker" style="background:var(--blue); box-shadow:0 0 6px 1px rgba(91,140,255,0.3)"></span>Balanced formations with clear dimension and spacing checks</li>
+          <li><span class="marker" style="background:var(--blue); box-shadow:0 0 6px 1px rgba(91,140,255,0.3)"></span>Prioritizes defining features within your selected drone count</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- EXPORT -->
+<section class="section" id="export">
+  <div class="wrap">
+    <div class="feature-row reverse reveal">
+      <div class="visual-panel"><canvas id="cnvExport"></canvas><div class="visual-caption">design · review · export</div></div>
+      <div class="feature-text">
+        <span class="eyebrow e-purple">Export</span>
+        <h2>Ready for Your<br>Production Workflow</h2>
+        <ul class="feature-list">
+          <li><span class="marker" style="background:var(--purple); box-shadow:0 0 6px 1px var(--purple-dim)"></span>Export formation coordinates, project snapshots and Blender scene scripts</li>
+          <li><span class="marker" style="background:var(--purple); box-shadow:0 0 6px 1px var(--purple-dim)"></span>Continue refining and validating your designs in your production tools</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CLOSING -->
+<section class="closing">
+  <div class="wrap reveal">
+    <span class="eyebrow e-cyan" style="justify-content:center; display:inline-flex;">Skysculpt AI</span>
+    <h2>Your next drone show<br>starts here.</h2>
+    <p>Design your formations, build your lighting effects and connect your scenes — all in one browser workspace.</p>
+    <a href="studio/" class="btn btn-primary">Request Studio access <span aria-hidden="true">→</span></a>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap footer-row">
+    <div class="logo" style="font-size:15px;">Skysculpt<span class="ai">ai</span></div>
+    <a href="mailto:nickolas@skysculptai.com" class="email">nickolas@skysculptai.com</a>
+    <div class="copy">© 2026 Skysculpt AI</div>
+  </div>
+</footer>
+
+<script>
+/* ================= shared utils ================= */
+function lerp(a,b,t){ return a+(b-a)*t; }
+function clamp(v,a,b){ return Math.max(a,Math.min(b,v)); }
+const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+/* reveal on scroll */
+const io = new IntersectionObserver((entries)=>{
+  entries.forEach(e=>{ if(e.isIntersecting){ e.target.classList.add('in'); io.unobserve(e.target);} });
+},{ threshold:0.12 });
+document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
+
+/* ================= scroll-linked flight path (interactive on scroll) ================= */
+(function(){
+  const dot = document.getElementById('flightDot');
+  const track = document.getElementById('flightPath');
+  if(!dot || !track) return;
+  const palette = [[45,224,232],[91,140,255],[168,91,234]];
+  function colorAt(t){
+    const seg = t<0.5 ? [palette[0],palette[1],t*2] : [palette[1],palette[2],(t-0.5)*2];
+    const r=Math.round(lerp(seg[0][0],seg[1][0],seg[2]));
+    const g=Math.round(lerp(seg[0][1],seg[1][1],seg[2]));
+    const b=Math.round(lerp(seg[0][2],seg[1][2],seg[2]));
+    return `rgb(${r},${g},${b})`;
+  }
+  let ticking=false;
+  function update(){
+    ticking=false;
+    const scrollable = document.documentElement.scrollHeight - window.innerHeight;
+    const t = clamp(scrollable>0 ? window.scrollY/scrollable : 0, 0, 1);
+    const rect = track.getBoundingClientRect();
+    dot.style.top = (t*rect.height)+'px';
+    const c = colorAt(t);
+    dot.style.background = c;
+    dot.style.boxShadow = `0 0 10px 2px ${c.replace('rgb','rgba').replace(')',',0.6)')}, 0 0 0 3px ${c.replace('rgb','rgba').replace(')',',0.1)')}`;
+  }
+  window.addEventListener('scroll', ()=>{
+    if(!ticking){ ticking=true; requestAnimationFrame(update); }
+  }, {passive:true});
+  update();
+})();
+
+/* ================= 3D tilt-on-hover for visual panels ================= */
+document.querySelectorAll('.visual-panel').forEach(panel=>{
+  panel.style.transformStyle = 'preserve-3d';
+  panel.addEventListener('mousemove', (e)=>{
+    if(reducedMotion) return;
+    const r = panel.getBoundingClientRect();
+    const px = (e.clientX - r.left)/r.width - 0.5;
+    const py = (e.clientY - r.top)/r.height - 0.5;
+    panel.classList.add('tilt-active');
+    panel.style.transform = `perspective(700px) rotateX(${(-py*7).toFixed(2)}deg) rotateY(${(px*9).toFixed(2)}deg) scale3d(1.015,1.015,1.015)`;
+  });
+  panel.addEventListener('mouseleave', ()=>{
+    panel.classList.remove('tilt-active');
+    panel.style.transform = 'perspective(700px) rotateX(0) rotateY(0) scale3d(1,1,1)';
+  });
+});
+
+/* ================= ambient drone-show background: wandering random-direction
+   drones behind the page content. Each drone slowly changes its own heading
+   (so movement genuinely drifts in random directions rather than a fixed
+   loop), and each has its own independent brightness pulse — with many
+   drones pulsing on different, unsynced cycles, the overall field naturally
+   feels like it thickens and thins over time instead of all fading together. ================= */
+(function(){
+  const canvas = document.getElementById('ambientCanvas');
+  if(!canvas) return;
+  const ctx = canvas.getContext('2d');
+  let dpr = Math.min(window.devicePixelRatio||1,2), W=0,H=0;
+  function resize(){
+    W = window.innerWidth; H = window.innerHeight;
+    canvas.width = W*dpr; canvas.height = H*dpr;
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  const palette = ['45,224,232','91,140,255','168,91,234'];
+  const COUNT = 70;
+  const pts = [];
+  for(let i=0;i<COUNT;i++){
+    pts.push({
+      x: Math.random()*W, y: Math.random()*H,
+      angle: Math.random()*Math.PI*2,
+      speed: 0.12 + Math.random()*0.3,
+      z: 0.25 + Math.random()*0.85,
+      phase: Math.random()*Math.PI*2,
+      pulseSpeed: 0.3 + Math.random()*0.55,
+      color: palette[i%palette.length],
+      r: 0.7 + Math.random()*1.7
+    });
+  }
+
+  let mx=0, my=0, tx=0, ty=0;
+  window.addEventListener('mousemove', (e)=>{
+    tx = (e.clientX/window.innerWidth - 0.5);
+    ty = (e.clientY/window.innerHeight - 0.5);
+  }, {passive:true});
+
+  if(reducedMotion){
+    ctx.clearRect(0,0,W,H);
+    pts.forEach(p=>{
+      ctx.beginPath(); ctx.arc(p.x,p.y,p.r*1.6,0,Math.PI*2);
+      ctx.fillStyle = `rgba(${p.color},${0.45*p.z})`;
+      ctx.fill();
+    });
+    return;
+  }
+
+  function frame(now){
+    mx += (tx-mx)*0.04; my += (ty-my)*0.04;
+    ctx.clearRect(0,0,W,H);
+    const t = now*0.001;
+    pts.forEach(p=>{
+      // drift the heading itself, at random — this is what makes each
+      // drone wander in genuinely unpredictable directions over time
+      // rather than following a fixed repeating path
+      p.angle += (Math.random()-0.5)*0.11;
+      p.x += Math.cos(p.angle)*p.speed*p.z;
+      p.y += Math.sin(p.angle)*p.speed*p.z;
+
+      // wrap around the edges so drones re-enter from the opposite side
+      const m = 24;
+      if(p.x < -m) p.x = W+m;
+      if(p.x > W+m) p.x = -m;
+      if(p.y < -m) p.y = H+m;
+      if(p.y > H+m) p.y = -m;
+
+      const parallaxX = mx*24*p.z, parallaxY = my*20*p.z;
+      const drawX = p.x + parallaxX, drawY = p.y + parallaxY;
+
+      // independent brightness pulse per drone — with unsynced phases
+      // across ~70 drones, the field as a whole reads as continuously
+      // thickening in some areas while thinning in others
+      const pulse = 0.5 + 0.5*(0.5+0.5*Math.sin(t*p.pulseSpeed + p.phase));
+      const op = 0.5*p.z*pulse;
+
+      ctx.beginPath();
+      ctx.arc(drawX, drawY, p.r*p.z*2.1, 0, Math.PI*2);
+      ctx.fillStyle = `rgba(${p.color},${op})`;
+      ctx.shadowColor = `rgba(${p.color},0.75)`;
+      ctx.shadowBlur = 7*p.z;
+      ctx.fill();
+    });
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+})();
+
+(function(){
+  const holder = document.querySelector('.hero-mark-holder');
+  if(!holder || reducedMotion) return;
+  let ticking=false;
+  function update(){
+    ticking=false;
+    const t = clamp(window.scrollY/500, 0, 1);
+    holder.style.transform = `translateY(${t*40}px) scale(${1-t*0.08})`;
+    holder.style.opacity = 1 - t*0.6;
+  }
+  window.addEventListener('scroll', ()=>{
+    if(!ticking){ ticking=true; requestAnimationFrame(update); }
+  }, {passive:true});
+})();
+
+/* ================= shape sampling helpers ================= */
+function sampleFromDraw(drawFn, w, h, step, threshold){
+  threshold = threshold || 120;
+  const off = document.createElement('canvas'); off.width=w; off.height=h;
+  const ctx = off.getContext('2d');
+  ctx.fillStyle = '#000'; ctx.fillRect(0,0,w,h);
+  ctx.fillStyle = '#fff'; ctx.strokeStyle = '#fff';
+  drawFn(ctx, w, h);
+  const data = ctx.getImageData(0,0,w,h).data;
+  const pts = [];
+  for(let y=0;y<h;y+=step){
+    for(let x=0;x<w;x+=step){
+      const i=(y*w+x)*4;
+      if(data[i]>threshold) pts.push({x,y});
+    }
+  }
+  return pts;
+}
+
+function sampleText(text, w, h, fontSize, step){
+  return sampleFromDraw((ctx,w,h)=>{
+    ctx.font = `900 ${fontSize}px Arial, 'Helvetica Neue', sans-serif`;
+    ctx.textBaseline = 'middle';
+    ctx.textAlign = 'left';
+    const letterGap = fontSize*0.16;
+    const chars = text.split('');
+    const widths = chars.map(c => ctx.measureText(c).width);
+    const totalWidth = widths.reduce((a,b)=>a+b,0) + letterGap*(chars.length-1);
+    let x = w/2 - totalWidth/2;
+    const y = h/2 + fontSize*0.03;
+    ctx.fillStyle = '#fff'; ctx.strokeStyle = '#fff';
+    ctx.lineWidth = Math.max(1.6, fontSize*0.034);
+    chars.forEach((c,i)=>{
+      ctx.fillText(c, x, y);
+      ctx.strokeText(c, x, y);
+      x += widths[i] + letterGap;
+    });
+  }, w, h, Math.min(step,5));
+}
+
+function sampleStar(w,h,step){
+  return sampleFromDraw((ctx,w,h)=>{
+    const cx=w/2, cy=h/2, outer=Math.min(w,h)*0.36, inner=outer*0.44, spikes=5;
+    ctx.beginPath();
+    let rot=-Math.PI/2, a=Math.PI/spikes;
+    ctx.moveTo(cx, cy-outer);
+    for(let i=0;i<spikes;i++){
+      let x=cx+Math.cos(rot)*outer, y=cy+Math.sin(rot)*outer; ctx.lineTo(x,y); rot+=a;
+      x=cx+Math.cos(rot)*inner; y=cy+Math.sin(rot)*inner; ctx.lineTo(x,y); rot+=a;
+    }
+    ctx.closePath();
+    ctx.fill();
+  }, w, h, step, 90);
+}
+
+function sampleHeart(w,h,step){
+  return sampleFromDraw((ctx,w,h)=>{
+    const cx=w/2;
+    const s = Math.min(w,h)*0.27;
+    const topCurveHeight = s*0.35;
+    const totalHeight = s + topCurveHeight;
+    const cy = h/2 - totalHeight/2;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy+topCurveHeight);
+    ctx.bezierCurveTo(cx, cy, cx-s, cy, cx-s, cy+topCurveHeight);
+    ctx.bezierCurveTo(cx-s, cy+(s+topCurveHeight)/2, cx, cy+(s+topCurveHeight)/2, cx, cy+s+topCurveHeight);
+    ctx.bezierCurveTo(cx, cy+(s+topCurveHeight)/2, cx+s, cy+(s+topCurveHeight)/2, cx+s, cy+topCurveHeight);
+    ctx.bezierCurveTo(cx+s, cy, cx, cy, cx, cy+topCurveHeight);
+    ctx.closePath();
+    ctx.fill();
+  }, w, h, step, 90);
+}
+
+function samplePortrait(w,h,step){
+  return sampleFromDraw((ctx,w,h)=>{
+    const cx=w/2, cy=h/2, s=Math.min(w,h);
+    ctx.save(); ctx.translate(cx,cy);
+    ctx.beginPath();
+    ctx.arc(0, -s*0.27, s*0.155, 0, Math.PI*2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(-s*0.32, s*0.36);
+    ctx.quadraticCurveTo(-s*0.32, s*0.02, -s*0.13, -s*0.03);
+    ctx.quadraticCurveTo(0, -s*0.07, s*0.13, -s*0.03);
+    ctx.quadraticCurveTo(s*0.32, s*0.02, s*0.32, s*0.36);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+  }, w, h, step, 90);
+}
+
+function sampleMandala(w,h,step){
+  return sampleFromDraw((ctx,w,h)=>{
+    const cx=w/2, cy=h/2, layers=4;
+    ctx.save(); ctx.translate(cx,cy);
+    for(let L=0; L<layers; L++){
+      const spikes = 6+L*2;
+      const outer = Math.min(w,h)*0.18*(L+1.6);
+      const inner = outer*0.55;
+      ctx.save(); ctx.rotate(L*0.35);
+      ctx.beginPath();
+      let rot = -Math.PI/2, step2 = Math.PI/spikes;
+      ctx.moveTo(0,-outer);
+      for(let i=0;i<spikes;i++){
+        let x=Math.cos(rot)*outer, y=Math.sin(rot)*outer; ctx.lineTo(x,y); rot+=step2;
+        x=Math.cos(rot)*inner; y=Math.sin(rot)*inner; ctx.lineTo(x,y); rot+=step2;
+      }
+      ctx.closePath();
+      ctx.globalAlpha = 0.9 - L*0.16;
+      ctx.fill();
+      ctx.restore();
+    }
+    ctx.restore();
+  }, w, h, step);
+}
+
+function sampleBird(w,h,step){
+  return sampleFromDraw((ctx,w,h)=>{
+    const cx=w/2, cy=h*0.48, s=Math.min(w,h);
+    ctx.save(); ctx.translate(cx,cy);
+    ctx.beginPath();
+    ctx.moveTo(-s*0.015, -s*0.03);
+    ctx.bezierCurveTo(-s*0.08,-s*0.24, -s*0.26,-s*0.40, -s*0.50,-s*0.34);
+    ctx.bezierCurveTo(-s*0.46,-s*0.24, -s*0.34,-s*0.14, -s*0.20,-s*0.10);
+    ctx.bezierCurveTo(-s*0.10,-s*0.07, -s*0.03,-s*0.04, -s*0.015,-s*0.03);
+    ctx.closePath(); ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(s*0.015, -s*0.03);
+    ctx.bezierCurveTo(s*0.08,-s*0.24, s*0.26,-s*0.40, s*0.50,-s*0.34);
+    ctx.bezierCurveTo(s*0.46,-s*0.24, s*0.34,-s*0.14, s*0.20,-s*0.10);
+    ctx.bezierCurveTo(s*0.10,-s*0.07, s*0.03,-s*0.04, s*0.015,-s*0.03);
+    ctx.closePath(); ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(0,-s*0.14);
+    ctx.bezierCurveTo(s*0.055,-s*0.10, s*0.05,s*0.08, s*0.018,s*0.20);
+    ctx.lineTo(0,s*0.30);
+    ctx.lineTo(-s*0.018,s*0.20);
+    ctx.bezierCurveTo(-s*0.05,s*0.08, -s*0.055,-s*0.10, 0,-s*0.14);
+    ctx.closePath(); ctx.fill();
+    ctx.beginPath();
+    ctx.ellipse(0, -s*0.155, s*0.032, s*0.038, 0, 0, Math.PI*2);
+    ctx.fill();
+    ctx.restore();
+  }, w, h, step, 90);
+}
+
+function sampleOutlineMark(w,h,step,filled){
+  return sampleFromDraw((ctx,w,h)=>{
+    const cx=w/2, cy=h/2, s=Math.min(w,h)*0.3;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy-s);
+    ctx.quadraticCurveTo(cx+s*0.32, cy-s*0.55, cx+s*0.9, cy-s*0.12);
+    ctx.quadraticCurveTo(cx+s*0.55, cy+s*0.1, cx, cy+s);
+    ctx.quadraticCurveTo(cx-s*0.55, cy+s*0.1, cx-s*0.9, cy-s*0.12);
+    ctx.quadraticCurveTo(cx-s*0.32, cy-s*0.55, cx, cy-s);
+    ctx.closePath();
+    if(filled){ ctx.fill(); }
+    else { ctx.lineWidth = s*0.1; ctx.stroke(); }
+  }, w, h, step, 90);
+}
+
+function sampleClock(w,h,step){
+  return sampleFromDraw((ctx,w,h)=>{
+    const cx=w/2, cy=h/2, r=Math.min(w,h)*0.28;
+    ctx.lineWidth = r*0.12; ctx.lineCap='round'; ctx.strokeStyle='#fff';
+    ctx.beginPath(); ctx.arc(cx,cy,r,0,Math.PI*2); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(cx,cy); ctx.lineTo(cx, cy-r*0.62); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(cx,cy); ctx.lineTo(cx+r*0.42, cy+r*0.18); ctx.stroke();
+  }, w, h, step, 90);
+}
+
+function sampleArrowUp(w,h,step){
+  return sampleFromDraw((ctx,w,h)=>{
+    const cx=w/2, cy=h/2, s=Math.min(w,h)*0.3;
+    ctx.lineWidth = s*0.16; ctx.lineCap='round'; ctx.lineJoin='round'; ctx.strokeStyle='#fff';
+    ctx.beginPath();
+    ctx.moveTo(cx-s*0.7, cy+s*0.5);
+    ctx.lineTo(cx-s*0.2, cy);
+    ctx.lineTo(cx+s*0.25, cy+s*0.35);
+    ctx.lineTo(cx+s*0.85, cy-s*0.55);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(cx+s*0.35, cy-s*0.6); ctx.lineTo(cx+s*0.85,cy-s*0.55); ctx.lineTo(cx+s*0.78,cy-s*0.08);
+    ctx.stroke();
+  }, w, h, step, 90);
+}
+
+function sampleCheck(w,h,step){
+  return sampleFromDraw((ctx,w,h)=>{
+    const cx=w/2, cy=h/2, s=Math.min(w,h)*0.3;
+    ctx.lineWidth = s*0.18; ctx.lineCap='round'; ctx.lineJoin='round'; ctx.strokeStyle='#fff';
+    ctx.beginPath();
+    ctx.moveTo(cx-s*0.6, cy+s*0.05);
+    ctx.lineTo(cx-s*0.15, cy+s*0.55);
+    ctx.lineTo(cx+s*0.7, cy-s*0.55);
+    ctx.stroke();
+  }, w, h, step, 90);
+}
+
+function sampleExportGlyph(w,h,step){
+  return sampleFromDraw((ctx,w,h)=>{
+    const cx=w/2, cy=h/2, s=Math.min(w,h)*0.22;
+    ctx.lineWidth = s*0.22; ctx.lineCap='round'; ctx.strokeStyle='#fff';
+    ctx.beginPath(); ctx.moveTo(cx,cy-s); ctx.lineTo(cx,cy+s*0.5); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(cx-s*0.55,cy-s*0.45); ctx.lineTo(cx,cy-s); ctx.lineTo(cx+s*0.55,cy-s*0.45); ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(cx-s*1.15, cy+s*0.9);
+    ctx.lineTo(cx-s*1.15, cy+s*1.35);
+    ctx.lineTo(cx+s*1.15, cy+s*1.35);
+    ctx.lineTo(cx+s*1.15, cy+s*0.9);
+    ctx.stroke();
+  }, w, h, step, 90);
+}
+
+/* ================= 2D formation renderer (scatter -> converge) ================= */
+function makeRenderer(canvas, colorFn){
+  const ctx = canvas.getContext('2d');
+  let dpr = Math.min(window.devicePixelRatio||1,2);
+  let W=0,H=0, particles=[];
+
+  function resize(){
+    const rect = canvas.getBoundingClientRect();
+    W = rect.width; H = rect.height;
+    canvas.width = W*dpr; canvas.height = H*dpr;
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+  }
+  resize();
+  window.addEventListener('resize', ()=>{ resize(); draw(); });
+
+  function setTargets(pts, boundsW, boundsH){
+    const offsetX=(W-boundsW)/2, offsetY=(H-boundsH)/2;
+    const targets = pts.map(p=>({x:p.x+offsetX, y:p.y+offsetY}));
+    while(particles.length < targets.length){
+      particles.push({ sx:0, sy:0, r:Math.random()*0.6+1.3 });
+    }
+    particles.length = targets.length;
+    const settleRadius = Math.min(W,H)*0.22;
+    particles.forEach((p,i)=>{
+      p.tx=targets[i].x; p.ty=targets[i].y;
+      const a = Math.random()*Math.PI*2;
+      const r = settleRadius*(0.4+Math.random()*0.6);
+      p.sx = p.tx + Math.cos(a)*r;
+      p.sy = p.ty + Math.sin(a)*r;
+    });
+  }
+
+  let progress=0, raf=null;
+  function animateIn(duration){
+    duration = duration || 1400;
+    if(reducedMotion){ progress=1; draw(); return; }
+    const start = performance.now();
+    cancelAnimationFrame(raf);
+    function tick(now){
+      const t = Math.min(1,(now-start)/duration);
+      progress = 1-Math.pow(1-t,3);
+      draw();
+      if(t<1) raf = requestAnimationFrame(tick);
+    }
+    raf = requestAnimationFrame(tick);
+  }
+
+  function draw(){
+    ctx.clearRect(0,0,W,H);
+    particles.forEach((p,i)=>{
+      const x = lerp(p.sx,p.tx,progress), y = lerp(p.sy,p.ty,progress);
+      const c = colorFn(p,i,particles.length);
+      droneSphere(ctx, x, y, p.r*1.7, rgbOf(c), 1);
+    });
+  }
+  return { setTargets, animateIn, draw, get W(){return W;}, get H(){return H;} };
+}
+
+function gradColor(t){
+  const stops=[[45,224,232],[91,140,255],[168,91,234]];
+  t = clamp(t,0,1);
+  const seg = t<0.5 ? [stops[0],stops[1],t*2] : [stops[1],stops[2],(t-0.5)*2];
+  const r=Math.round(lerp(seg[0][0],seg[1][0],seg[2]));
+  const g=Math.round(lerp(seg[0][1],seg[1][1],seg[2]));
+  const b=Math.round(lerp(seg[0][2],seg[1][2],seg[2]));
+  return `rgb(${r},${g},${b})`;
+}
+function rgbOf(str){ return str.slice(4,-1); }
+
+function droneSphere(ctx, x, y, r, rgbTriplet, opacity){
+  if(r<=0 || opacity<=0) return;
+  const grad = ctx.createRadialGradient(x-r*0.32, y-r*0.32, r*0.05, x, y, r*1.05);
+  grad.addColorStop(0,   `rgba(255,255,255,${0.85*opacity})`);
+  grad.addColorStop(0.32,`rgba(${rgbTriplet},${0.95*opacity})`);
+  grad.addColorStop(1,   `rgba(${rgbTriplet},0)`);
+  ctx.beginPath(); ctx.arc(x,y,r*1.05,0,Math.PI*2);
+  ctx.fillStyle = grad;
+  ctx.fill();
+}
+
+/* ================= HERO: Skysculpt cube mark (settles once, then gently sways via CSS) ================= */
+(function(){
+  const svg = document.getElementById('cubeSvg');
+  if(!svg) return;
+  const nodesGroup = document.getElementById('nodesGroup');
+  const edgesGroup = document.getElementById('edgesGroup');
+  const svgns = 'http://www.w3.org/2000/svg';
+
+  const SCALE = 92, CX = 350, CY = 300;
+  const ux = {x:0.87,y:0.5}, uy = {x:0,y:-1}, uz = {x:-0.87,y:0.5};
+  function project(x,y,z){
+    return { px: CX+(x*ux.x+y*uy.x+z*uz.x)*SCALE, py: CY+(x*ux.y+y*uy.y+z*uz.y)*SCALE };
+  }
+  function hex(n){ n=Math.max(0,Math.min(255,Math.round(n))); const s=n.toString(16); return s.length<2?'0'+s:s; }
+  function lerpColor(t,c1,c2){ return '#'+hex(c1[0]+(c2[0]-c1[0])*t)+hex(c1[1]+(c2[1]-c1[1])*t)+hex(c1[2]+(c2[2]-c1[2])*t); }
+  const TEAL=[34,217,208], PURPLE=[139,111,240];
+
+  const N=4, nodeMap={};
+  function key(x,y,z){ return x.toFixed(3)+','+y.toFixed(3)+','+z.toFixed(3); }
+  function addNode(x,y,z){
+    const k=key(x,y,z);
+    if(nodeMap[k]) return nodeMap[k];
+    const t=Math.max(0,Math.min(1,(x-z+1)/2));
+    let color=lerpColor(t,TEAL,PURPLE);
+    const isLead = (x===1 && y===1 && z===0);
+    if(isLead) color='#eaf6ff';
+    const p=project(x,y,z);
+    const node={x,y,z,px:p.px,py:p.py,color,lead:isLead,key:k};
+    nodeMap[k]=node; return node;
+  }
+  const faces=[
+    {fix:'y',val:1,va:'x',vb:'z'},
+    {fix:'z',val:1,va:'x',vb:'y'},
+    {fix:'x',val:1,va:'z',vb:'y'}
+  ];
+  const faceGrids = faces.map(f=>{
+    const grid=[];
+    for(let i=0;i<=N;i++){ grid.push([]);
+      for(let j=0;j<=N;j++){
+        const c={x:0,y:0,z:0}; c[f.fix]=f.val; c[f.va]=i/N; c[f.vb]=j/N;
+        grid[i].push(addNode(c.x,c.y,c.z));
+      }
+    }
+    return grid;
+  });
+  const nodes = Object.values(nodeMap);
+  const edges = [];
+  faceGrids.forEach(grid=>{
+    for(let i=0;i<=N;i++){
+      for(let j=0;j<=N;j++){
+        if(i<N) edges.push({a:grid[i][j], b:grid[i+1][j], boundary:(j===0||j===N)});
+        if(j<N) edges.push({a:grid[i][j], b:grid[i][j+1], boundary:(i===0||i===N)});
+        if(i<N && j<N) edges.push({a:grid[i][j], b:grid[i+1][j+1], diag:true});
+      }
+    }
+  });
+
+  edges.forEach(e=>{
+    const line=document.createElementNS(svgns,'line');
+    line.setAttribute('x1',e.a.px); line.setAttribute('y1',e.a.py);
+    line.setAttribute('x2',e.b.px); line.setAttribute('y2',e.b.py);
+    line.setAttribute('stroke',e.a.color);
+    line.setAttribute('stroke-width', e.boundary?1.4:0.6);
+    line.setAttribute('opacity', e.diag?0.35:0.6);
+    if(e.diag) line.setAttribute('stroke-dasharray','3,4');
+    edgesGroup.appendChild(line);
+  });
+  nodes.forEach(n=>{
+    const c=document.createElementNS(svgns,'circle');
+    c.setAttribute('r', n.lead?6:4);
+    c.setAttribute('fill', n.color);
+    c.setAttribute('filter', n.lead?'url(#glowStrong)':'url(#glow)');
+    c.setAttribute('cx', n.px); c.setAttribute('cy', n.py);
+    c.style.opacity = '0';
+    nodesGroup.appendChild(c);
+    n.el = c;
+  });
+
+  function rand(a,b){ return a+Math.random()*(b-a); }
+  function easeOutCubic(t){ return 1-Math.pow(1-t,3); }
+  function clamp(v,a,b){ return Math.max(a,Math.min(b,v)); }
+  nodes.forEach(n=>{
+    const angle=rand(0,Math.PI*2), radius=rand(160,300);
+    n.sx = CX+Math.cos(angle)*radius; n.sy = CY+Math.sin(angle)*radius;
+    n.delay = rand(0,700);
+  });
+
+  const FLY_IN = 1300;
+  let start=null;
+  function frame(now){
+    if(start===null) start=now;
+    const elapsed = now-start;
+    let allDone = true;
+    nodes.forEach(n=>{
+      const t = clamp((elapsed-n.delay)/FLY_IN,0,1);
+      if(t<1) allDone=false;
+      const e = easeOutCubic(t);
+      n.el.setAttribute('cx', n.sx+(n.px-n.sx)*e);
+      n.el.setAttribute('cy', n.sy+(n.py-n.sy)*e);
+      n.el.style.opacity = 0.15+0.85*clamp(t*2,0,1);
+    });
+    if(!allDone){ requestAnimationFrame(frame); }
+    else { edgesGroup.style.transition='opacity .7s ease'; edgesGroup.style.opacity='1'; }
+  }
+
+  if(reducedMotion){
+    nodes.forEach(n=>{ n.el.setAttribute('cx',n.px); n.el.setAttribute('cy',n.py); n.el.style.opacity='1'; });
+    edgesGroup.style.opacity='1';
+  } else {
+    requestAnimationFrame(frame);
+  }
+})();
+
+/* ================= generic section canvas: play once visible, loop shape cycle ================= */
+function bindSection(id, shapeFns, colorFn, interval){
+  const canvas = document.getElementById(id);
+  if(!canvas) return;
+  const renderer = makeRenderer(canvas, colorFn);
+  let idx=0, timer=null, started=false;
+  function load(){
+    const w=Math.max(renderer.W,200), h=Math.max(renderer.H,150);
+    const pts = shapeFns[idx%shapeFns.length](w,h);
+    renderer.setTargets(pts,w,h);
+    renderer.animateIn(1200);
+    idx++;
+  }
+  const obs = new IntersectionObserver((entries)=>{
+    entries.forEach(e=>{
+      if(e.isIntersecting && !started){
+        started = true; load();
+        if(!reducedMotion && interval) timer = setInterval(load, interval);
+      }
+    });
+  }, {threshold:0.35});
+  obs.observe(canvas);
+}
+
+/* ================= GENERAL: real 3D drone-show shapes (star / heart / rocket) ================= */
+function buildPuffy3D(drawFn, size, angleSteps, phiSteps){
+  const off = document.createElement('canvas'); off.width=size; off.height=size;
+  const ictx = off.getContext('2d');
+  ictx.fillStyle='#000'; ictx.fillRect(0,0,size,size);
+  ictx.fillStyle='#fff';
+  drawFn(ictx, size, size);
+  const data = ictx.getImageData(0,0,size,size).data;
+  function isInside(x,y){
+    if(x<0||y<0||x>=size||y>=size) return false;
+    const i=(((y|0)*size)+(x|0))*4;
+    return data[i]>90;
+  }
+  const cx=size/2, cy=size/2, maxR=size*0.5;
+
+  // 1. trace a fine-resolution outline first (360 rays)
+  const rawN = 360;
+  const raw = [];
+  for(let i=0;i<rawN;i++){
+    const theta = (i/rawN)*Math.PI*2;
+    const dx=Math.cos(theta), dy=Math.sin(theta);
+    let r=0;
+    for(let rr=1; rr<=maxR; rr+=1){
+      if(isInside(cx+dx*rr, cy+dy*rr)) r=rr; else break;
+    }
+    raw.push({ theta, r: r/size });
+  }
+
+  // 2. compute cumulative arc length around that fine outline
+  const xy = raw.map(p=>({ x:p.r*Math.cos(p.theta), y:p.r*Math.sin(p.theta) }));
+  const cum = [0];
+  for(let i=1;i<=rawN;i++){
+    const a = xy[i-1], b = xy[i%rawN];
+    cum.push(cum[i-1] + Math.hypot(b.x-a.x, b.y-a.y));
+  }
+  const total = cum[rawN];
+
+  // 3. resample at EQUAL arc-length steps — this is what makes neighboring
+  //    drones end up symmetrically, evenly spaced apart around the shape,
+  //    instead of clumping on tight curves and spreading out on flat edges
+  const profile = [];
+  for(let k=0;k<angleSteps;k++){
+    const targetLen = (k/angleSteps)*total;
+    let idx = 0;
+    while(idx<rawN && cum[idx+1]<targetLen) idx++;
+    const segStart = cum[idx], segEnd = cum[idx+1] ?? total;
+    const segFrac = segEnd>segStart ? (targetLen-segStart)/(segEnd-segStart) : 0;
+    let theta0 = raw[idx].theta, theta1 = raw[(idx+1)%rawN].theta;
+    if(theta1 < theta0) theta1 += Math.PI*2;
+    const theta = theta0 + (theta1-theta0)*segFrac;
+    const r = raw[idx].r + (raw[(idx+1)%rawN].r - raw[idx].r)*segFrac;
+    profile.push({ theta, r });
+  }
+
+  // 4. loft into a puffy 3D volume, same as before, now using evenly-spaced points
+  const avgR = profile.reduce((a,p)=>a+p.r,0)/profile.length;
+  const depthScale = avgR*0.44;
+  const phiMax = Math.PI*0.44;
+  const points=[];
+  profile.forEach(p=>{
+    for(let j=0;j<phiSteps;j++){
+      const phi = -phiMax + (j/(phiSteps-1))*(2*phiMax);
+      const scale = Math.cos(phi);
+      points.push([ p.r*scale*Math.cos(p.theta), p.r*scale*Math.sin(p.theta), Math.sin(phi)*depthScale ]);
+    }
+  });
+  return points;
+}
+function drawStarShape(ctx,w,h){
+  const cx=w/2, cy=h/2, outer=Math.min(w,h)*0.36, inner=outer*0.44, spikes=5;
+  ctx.beginPath();
+  let rot=-Math.PI/2, a=Math.PI/spikes;
+  ctx.moveTo(cx, cy-outer);
+  for(let i=0;i<spikes;i++){
+    let x=cx+Math.cos(rot)*outer, y=cy+Math.sin(rot)*outer; ctx.lineTo(x,y); rot+=a;
+    x=cx+Math.cos(rot)*inner; y=cy+Math.sin(rot)*inner; ctx.lineTo(x,y); rot+=a;
+  }
+  ctx.closePath();
+  ctx.fill();
+}
+function roundedRectPath(ctx, x, y, w, h, r){
+  ctx.beginPath();
+  ctx.moveTo(x+r, y);
+  ctx.lineTo(x+w-r, y);
+  ctx.quadraticCurveTo(x+w, y, x+w, y+r);
+  ctx.lineTo(x+w, y+h-r);
+  ctx.quadraticCurveTo(x+w, y+h, x+w-r, y+h);
+  ctx.lineTo(x+r, y+h);
+  ctx.quadraticCurveTo(x, y+h, x, y+h-r);
+  ctx.lineTo(x, y+r);
+  ctx.quadraticCurveTo(x, y, x+r, y);
+  ctx.closePath();
+}
+function drawPopsicleShape(ctx,w,h){
+  const cx=w/2, cy=h/2, s=Math.min(w,h);
+  ctx.save(); ctx.translate(cx,cy);
+  const iceW=0.46*s, iceH=0.5*s, iceY=-0.46*s, iceR=0.11*s;
+  roundedRectPath(ctx, -iceW/2, iceY, iceW, iceH, iceR);
+  ctx.fill();
+  const stickW=0.12*s, stickH=0.42*s, stickY=iceY+iceH-0.04*s;
+  roundedRectPath(ctx, -stickW/2, stickY, stickW, stickH, stickW*0.35);
+  ctx.fill();
+  ctx.restore();
+}
+function drawCrownShape(ctx,w,h){
+  const cx=w/2, cy=h/2, s=Math.min(w,h);
+  ctx.save(); ctx.translate(cx,cy);
+  ctx.beginPath();
+  ctx.moveTo(-0.44*s, 0.30*s);
+  ctx.lineTo(-0.44*s, 0.05*s);
+  ctx.lineTo(-0.42*s, -0.20*s);
+  ctx.lineTo(-0.315*s, 0.05*s);
+  ctx.lineTo(-0.21*s, -0.34*s);
+  ctx.lineTo(-0.105*s, 0.05*s);
+  ctx.lineTo(0, -0.44*s);
+  ctx.lineTo(0.105*s, 0.05*s);
+  ctx.lineTo(0.21*s, -0.34*s);
+  ctx.lineTo(0.315*s, 0.05*s);
+  ctx.lineTo(0.42*s, -0.20*s);
+  ctx.lineTo(0.44*s, 0.05*s);
+  ctx.lineTo(0.44*s, 0.30*s);
+  ctx.closePath(); ctx.fill();
+  [[-0.42,-0.20],[-0.21,-0.34],[0,-0.44],[0.21,-0.34],[0.42,-0.20]].forEach(([px,py])=>{
+    ctx.beginPath(); ctx.arc(px*s, py*s, 0.045*s, 0, Math.PI*2); ctx.fill();
+  });
+  [-0.27,0,0.27].forEach(px=>{
+    ctx.beginPath(); ctx.arc(px*s, 0.17*s, 0.05*s, 0, Math.PI*2); ctx.fill();
+  });
+  ctx.restore();
+}
+function drawPhoenixShape(ctx,w,h){
+  const cx=w/2, cy=h*0.48, s=Math.min(w,h);
+  ctx.save(); ctx.translate(cx,cy);
+  ctx.beginPath();
+  ctx.moveTo(-s*0.015, -s*0.03);
+  ctx.bezierCurveTo(-s*0.08,-s*0.24, -s*0.26,-s*0.40, -s*0.50,-s*0.34);
+  ctx.bezierCurveTo(-s*0.46,-s*0.24, -s*0.34,-s*0.14, -s*0.20,-s*0.10);
+  ctx.bezierCurveTo(-s*0.10,-s*0.07, -s*0.03,-s*0.04, -s*0.015,-s*0.03);
+  ctx.closePath(); ctx.fill();
+  ctx.beginPath();
+  ctx.moveTo(s*0.015, -s*0.03);
+  ctx.bezierCurveTo(s*0.08,-s*0.24, s*0.26,-s*0.40, s*0.50,-s*0.34);
+  ctx.bezierCurveTo(s*0.46,-s*0.24, s*0.34,-s*0.14, s*0.20,-s*0.10);
+  ctx.bezierCurveTo(s*0.10,-s*0.07, s*0.03,-s*0.04, s*0.015,-s*0.03);
+  ctx.closePath(); ctx.fill();
+  ctx.beginPath();
+  ctx.moveTo(0,-s*0.14);
+  ctx.bezierCurveTo(s*0.055,-s*0.10, s*0.05,s*0.08, s*0.018,s*0.20);
+  ctx.lineTo(0,s*0.30);
+  ctx.lineTo(-s*0.018,s*0.20);
+  ctx.bezierCurveTo(-s*0.05,s*0.08, -s*0.055,-s*0.10, 0,-s*0.14);
+  ctx.closePath(); ctx.fill();
+  ctx.beginPath();
+  ctx.ellipse(0, -s*0.155, s*0.032, s*0.038, 0, 0, Math.PI*2);
+  ctx.fill();
+  ctx.restore();
+}
+function drawGemShape(ctx,w,h){
+  const cx=w/2, cy=h/2, s=Math.min(w,h);
+  ctx.save(); ctx.translate(cx,cy);
+  ctx.beginPath();
+  ctx.moveTo(-0.18*s, -0.42*s);
+  ctx.lineTo(0.18*s, -0.42*s);
+  ctx.lineTo(0.42*s, -0.10*s);
+  ctx.lineTo(0, 0.44*s);
+  ctx.lineTo(-0.42*s, -0.10*s);
+  ctx.closePath(); ctx.fill();
+  ctx.restore();
+}
+function drawUfoShape(ctx,w,h){
+  const cx=w/2, cy=h/2, s=Math.min(w,h);
+  ctx.save(); ctx.translate(cx,cy);
+  ctx.beginPath();
+  ctx.ellipse(0, 0.04*s, 0.46*s, 0.13*s, 0, 0, Math.PI*2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.ellipse(0, -0.08*s, 0.22*s, 0.20*s, 0, 0, Math.PI*2);
+  ctx.fill();
+  [-0.28,0,0.28].forEach(px=>{
+    ctx.beginPath(); ctx.arc(px*s, 0.10*s, 0.045*s, 0, Math.PI*2); ctx.fill();
+  });
+  ctx.restore();
+}
+function drawSatelliteShape(ctx,w,h){
+  const cx=w/2, cy=h/2, s=Math.min(w,h);
+  ctx.save(); ctx.translate(cx,cy);
+  ctx.beginPath(); ctx.rect(-0.09*s, -0.16*s, 0.18*s, 0.32*s); ctx.fill();
+  ctx.beginPath(); ctx.rect(-0.46*s, -0.11*s, 0.30*s, 0.22*s); ctx.fill();
+  ctx.beginPath(); ctx.rect(0.16*s, -0.11*s, 0.30*s, 0.22*s); ctx.fill();
+  ctx.beginPath(); ctx.rect(-0.018*s, -0.38*s, 0.036*s, 0.24*s); ctx.fill();
+  ctx.beginPath(); ctx.arc(0, -0.40*s, 0.065*s, 0, Math.PI*2); ctx.fill();
+  ctx.restore();
+}
+function drawAtomShape(ctx,w,h){
+  const cx=w/2, cy=h/2, s=Math.min(w,h);
+  ctx.save(); ctx.translate(cx,cy);
+  ctx.strokeStyle = '#fff';
+  ctx.lineWidth = 0.032*s;
+  [0, Math.PI/3, -Math.PI/3].forEach(rot=>{
+    ctx.beginPath();
+    ctx.ellipse(0, 0, 0.44*s, 0.17*s, rot, 0, Math.PI*2);
+    ctx.stroke();
+  });
+  ctx.beginPath(); ctx.arc(0, 0, 0.09*s, 0, Math.PI*2); ctx.fill();
+  ctx.restore();
+}
+function drawBoltShape(ctx,w,h){
+  const cx=w/2, cy=h/2, s=Math.min(w,h);
+  ctx.save(); ctx.translate(cx,cy);
+  ctx.beginPath();
+  ctx.moveTo(0.10*s, -0.44*s);
+  ctx.lineTo(-0.26*s, 0.04*s);
+  ctx.lineTo(-0.02*s, 0.04*s);
+  ctx.lineTo(-0.12*s, 0.44*s);
+  ctx.lineTo(0.28*s, -0.06*s);
+  ctx.lineTo(0.02*s, -0.06*s);
+  ctx.closePath(); ctx.fill();
+  ctx.restore();
+}
+function drawMoonShape(ctx,w,h){
+  const cx=w/2, cy=h/2, s=Math.min(w,h);
+  ctx.save(); ctx.translate(cx,cy);
+  ctx.beginPath();
+  ctx.arc(0, 0, 0.42*s, 0, Math.PI*2);
+  ctx.arc(0.17*s, -0.08*s, 0.36*s, 0, Math.PI*2);
+  ctx.fill('evenodd');
+  ctx.restore();
+}
+function drawBalloonShape(ctx,w,h){
+  const cx=w/2, cy=h/2, s=Math.min(w,h);
+  ctx.save(); ctx.translate(cx,cy);
+  ctx.beginPath();
+  ctx.ellipse(0, -0.10*s, 0.33*s, 0.38*s, 0, 0, Math.PI*2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.moveTo(-0.06*s, 0.26*s);
+  ctx.lineTo(0.06*s, 0.26*s);
+  ctx.lineTo(0, 0.36*s);
+  ctx.closePath(); ctx.fill();
+  ctx.restore();
+}
+function drawRocketShape(ctx,w,h){
+  const cx=w/2, cy=h/2, s=Math.min(w,h);
+  ctx.save(); ctx.translate(cx,cy);
+  ctx.beginPath();
+  ctx.moveTo(0,-s*0.42);
+  ctx.quadraticCurveTo(s*0.155,-s*0.16, s*0.125,s*0.10);
+  ctx.lineTo(-s*0.125,s*0.10);
+  ctx.quadraticCurveTo(-s*0.155,-s*0.16, 0,-s*0.42);
+  ctx.closePath(); ctx.fill();
+  ctx.beginPath();
+  ctx.moveTo(-s*0.125,-s*0.01); ctx.lineTo(-s*0.30,s*0.20); ctx.lineTo(-s*0.125,s*0.14); ctx.closePath(); ctx.fill();
+  ctx.beginPath();
+  ctx.moveTo(s*0.125,-s*0.01); ctx.lineTo(s*0.30,s*0.20); ctx.lineTo(s*0.125,s*0.14); ctx.closePath(); ctx.fill();
+  ctx.beginPath();
+  ctx.moveTo(-s*0.075,s*0.10); ctx.quadraticCurveTo(0,s*0.32,s*0.075,s*0.10); ctx.closePath(); ctx.fill();
+  ctx.restore();
+}
+
+(function(){
+  const canvas = document.getElementById('cnvGeneral');
+  if(!canvas) return;
+  const ctx = canvas.getContext('2d');
+  let dpr = Math.min(window.devicePixelRatio||1,2), W=0,H=0;
+  function resize(){
+    const r = canvas.getBoundingClientRect(); W=r.width; H=r.height;
+    canvas.width=W*dpr; canvas.height=H*dpr; ctx.setTransform(dpr,0,0,dpr,0,0);
+  }
+  resize(); window.addEventListener('resize', resize);
+
+  const SIZE = 240;
+  const shapes = [
+    buildPuffy3D(drawStarShape, SIZE, 44, 7),
+    buildPuffy3D(drawGemShape, SIZE, 44, 7),
+    buildPuffy3D(drawPhoenixShape, SIZE, 44, 7),
+    buildPuffy3D(drawBoltShape, SIZE, 44, 7),
+    buildPuffy3D(drawPopsicleShape, SIZE, 44, 7),
+    buildPuffy3D(drawRocketShape, SIZE, 44, 7)
+  ];
+  const POINT_COUNT = shapes[0].length;
+  const nodeDelays = Array.from({length:POINT_COUNT}, ()=>Math.random());
+
+  let shapeIdx = 0;
+  let prevPts = shapes[0], nextPts = shapes[0];
+  let state = 'hold', stateStart = 0;
+  const HOLD_MS = 2600, TRAVEL_MS = 1500;
+  const TILT_X = 0.55;
+
+  let angleY = 0, visible = false;
+  function rotate(v, ay, ax){
+    let x=v[0], y=v[1], z=v[2];
+    let x1 = x*Math.cos(ay) - z*Math.sin(ay), z1 = x*Math.sin(ay) + z*Math.cos(ay);
+    let y1 = y*Math.cos(ax) - z1*Math.sin(ax), z2 = y*Math.sin(ax) + z1*Math.cos(ax);
+    return [x1,y1,z2];
+  }
+  function easeOutCubic(t){ return 1-Math.pow(1-t,3); }
+  function easeInOutCubic(t){ return t<0.5 ? 4*t*t*t : 1-Math.pow(-2*t+2,3)/2; }
+
+  function frame(now){
+    if(!visible) return;
+    angleY += 0.006;
+    let elapsed = now - stateStart;
+    if(state==='hold' && elapsed>HOLD_MS){
+      prevPts = shapes[shapeIdx];
+      shapeIdx = (shapeIdx+1)%shapes.length;
+      nextPts = shapes[shapeIdx];
+      state='travel'; stateStart=now; elapsed=0;
+    } else if(state==='travel' && elapsed>TRAVEL_MS){
+      state='hold'; stateStart=now; elapsed=0;
+    }
+
+    ctx.clearRect(0,0,W,H);
+    const S = Math.min(W,H)*1.55, focal=3.0;
+
+    let livePts;
+    if(state==='hold'){
+      livePts = nextPts;
+    } else {
+      const g = clamp(elapsed/TRAVEL_MS, 0, 1);
+      livePts = nextPts.map((to,i)=>{
+        const from = prevPts[i];
+        const localT = clamp((g - nodeDelays[i]*0.3)/0.7, 0, 1);
+        const eased = easeInOutCubic(localT);
+        return [
+          lerp(from[0], to[0], eased),
+          lerp(from[1], to[1], eased),
+          lerp(from[2], to[2], eased)
+        ];
+      });
+    }
+
+    const proj = livePts.map(v=>{
+      const r = rotate(v, angleY, TILT_X);
+      const scale = focal/(focal-r[2]);
+      return { x: W/2+r[0]*S*scale, y: H/2+r[1]*S*scale, z:r[2], y0:v[1], scale };
+    });
+    proj.sort((a,b)=>a.z-b.z);
+    proj.forEach(p=>{
+      const depthOp = clamp(0.4+p.z*0.6,0.2,1);
+      const rad = 2.6*p.scale;
+      const c = gradColor(0.5+p.y0*1.4);
+      droneSphere(ctx, p.x, p.y, rad, rgbOf(c), depthOp);
+    });
+    requestAnimationFrame(frame);
+  }
+
+  const obs = new IntersectionObserver((entries)=>{
+    entries.forEach(e=>{
+      const was = visible; visible = e.isIntersecting;
+      if(visible && !was){ stateStart = performance.now(); requestAnimationFrame(frame); }
+    });
+  }, {threshold:0.3});
+  obs.observe(canvas);
+
+  if(reducedMotion){
+    visible = true;
+    ctx.clearRect(0,0,W,H);
+    const S = Math.min(W,H)*1.55, focal=3.0;
+    shapes[0].forEach(v=>{
+      const r = rotate(v, 0.5, TILT_X);
+      const scale = focal/(focal-r[2]);
+      const x=W/2+r[0]*S*scale, y=H/2+r[1]*S*scale;
+      const c = gradColor(0.5+v[1]*1.4);
+      droneSphere(ctx, x, y, 2.6*scale, rgbOf(c), 1);
+    });
+  }
+})();
+
+/* TEXT: cycles through words and a lettering-style glyph */
+bindSection('cnvText', [
+  (w,h)=> sampleText('HELLO', w,h, Math.min(h*0.42, w*0.16), 8),
+  (w,h)=> sampleText('SHOW', w,h, Math.min(h*0.42, w*0.18), 8),
+  (w,h)=> sampleText('Aa', w,h, Math.min(h*0.5, w*0.3), 8)
+], (p,i,n)=> gradColor(0.15+0.15*Math.sin(i*0.13)), 4200);
+
+/* IMAGES & LOGOS: outline <-> fill, the two modes described in the text */
+bindSection('cnvLogo', [
+  (w,h)=> sampleOutlineMark(w,h,7,false),
+  (w,h)=> sampleOutlineMark(w,h,8,true)
+], (p,i,n)=> gradColor(0.6+0.3*Math.sin(i*0.2)), 3600);
+
+/* EXPORT: export glyph, then a checkmark for "ready" — matches the copy */
+bindSection('cnvExport', [
+  (w,h)=> sampleExportGlyph(w,h,7),
+  (w,h)=> sampleCheck(w,h,7)
+], (p,i,n)=> gradColor(0.65+0.25*Math.sin(i*0.25)), 3800);
+
+/* ================= AI DISTRIBUTION: self-optimizing swarm ================= */
+(function(){
+  const canvas = document.getElementById('cnvAI');
+  if(!canvas) return;
+  const ctx = canvas.getContext('2d');
+  let dpr = Math.min(window.devicePixelRatio||1,2), W=0,H=0;
+  function resize(){
+    const r = canvas.getBoundingClientRect(); W=r.width; H=r.height;
+    canvas.width=W*dpr; canvas.height=H*dpr; ctx.setTransform(dpr,0,0,dpr,0,0);
+  }
+  resize(); window.addEventListener('resize', resize);
+
+  const COUNT = 16;
+  let nodes = [];
+  function initNodes(){
+    nodes = [];
+    for(let i=0;i<COUNT;i++){
+      const a = (i/COUNT)*Math.PI*2;
+      const r = Math.min(W,H)*0.34;
+      nodes.push({
+        tx: W/2+Math.cos(a)*r, ty: H/2+Math.sin(a)*r*0.85,
+        x: W/2+(Math.random()-0.5)*W*0.7, y: H/2+(Math.random()-0.5)*H*0.7,
+        r: 4
+      });
+    }
+  }
+  let started=false, raf=null, startTime=0;
+  function frame(now){
+    if(!startTime) startTime = now;
+    const elapsed = now-startTime;
+    const t = clamp(elapsed/1600,0,1);
+    const eased = 1-Math.pow(1-t,3);
+    ctx.clearRect(0,0,W,H);
+    nodes.forEach((n,i)=>{
+      n.cx = lerp(n.x,n.tx,eased); n.cy = lerp(n.y,n.ty,eased);
+    });
+    nodes.forEach(n=>{
+      ctx.beginPath(); ctx.arc(n.cx,n.cy, 12, 0, Math.PI*2);
+      ctx.strokeStyle = `rgba(91,140,255,${0.18*eased})`; ctx.lineWidth=1; ctx.stroke();
+    });
+    ctx.beginPath();
+    nodes.forEach((n,i)=>{
+      const nx = nodes[(i+1)%nodes.length];
+      ctx.moveTo(n.cx,n.cy); ctx.lineTo(nx.cx,nx.cy);
+    });
+    ctx.strokeStyle = `rgba(45,224,232,${0.22*eased})`; ctx.lineWidth=1; ctx.stroke();
+    nodes.forEach(n=>{
+      ctx.beginPath(); ctx.arc(n.cx,n.cy,n.r,0,Math.PI*2);
+      ctx.fillStyle = `rgba(91,140,255,${0.9*eased+0.1})`;
+      ctx.shadowColor='rgba(91,140,255,0.6)'; ctx.shadowBlur=6;
+      ctx.fill();
+    });
+    if(!reducedMotion) raf = requestAnimationFrame(frame);
+  }
+  const obs = new IntersectionObserver((entries)=>{
+    entries.forEach(e=>{
+      if(e.isIntersecting && !started){
+        started = true; initNodes(); startTime=0;
+        raf = requestAnimationFrame(frame);
+        if(!reducedMotion){
+          setInterval(()=>{ initNodes(); startTime=0; }, 5600);
+        }
+      }
+    });
+  }, {threshold:0.35});
+  obs.observe(canvas);
+})();
+
+/* ================= 3D MODELS: an actual rotating drone-show formation (sphere of individual lights) ================= */
+(function(){
+  const canvas = document.getElementById('cnv3d');
+  if(!canvas) return;
+  const ctx = canvas.getContext('2d');
+  let dpr = Math.min(window.devicePixelRatio||1,2), W=0,H=0;
+  function resize(){
+    const r = canvas.getBoundingClientRect(); W=r.width; H=r.height;
+    canvas.width=W*dpr; canvas.height=H*dpr; ctx.setTransform(dpr,0,0,dpr,0,0);
+  }
+  resize(); window.addEventListener('resize', resize);
+
+  const COUNT = 130;
+  function fibonacciSphere(samples){
+    const pts = [];
+    const offset = 2/samples;
+    const increment = Math.PI * (3 - Math.sqrt(5));
+    for(let i=0;i<samples;i++){
+      const y = ((i*offset) - 1) + (offset/2);
+      const r = Math.sqrt(Math.max(0, 1 - y*y));
+      const phi = i * increment;
+      pts.push([Math.cos(phi)*r, y, Math.sin(phi)*r]);
+    }
+    return pts;
+  }
+  const drones = fibonacciSphere(COUNT);
+
+  let angleY=0, angleX=0.28;
+  let visible=false;
+  function rotate(v, ay, ax){
+    let x=v[0], y=v[1], z=v[2];
+    let x1 = x*Math.cos(ay) - z*Math.sin(ay);
+    let z1 = x*Math.sin(ay) + z*Math.cos(ay);
+    let y1 = y*Math.cos(ax) - z1*Math.sin(ax);
+    let z2 = y*Math.sin(ax) + z1*Math.cos(ax);
+    return [x1,y1,z2];
+  }
+
+  function frame(){
+    if(!visible){ return; }
+    angleY += 0.0035;
+    ctx.clearRect(0,0,W,H);
+    const S = Math.min(W,H)*0.34;
+    const focal = 3.0;
+    const projected = drones.map(v=>{
+      const r = rotate(v, angleY, angleX);
+      const scale = focal/(focal - r[2]);
+      return { x: W/2 + r[0]*S*scale, y: H/2 + r[1]*S*scale, z:r[2], y0:v[1], scale };
+    });
+    projected.sort((a,b)=> a.z-b.z);
+    projected.forEach(p=>{
+      const depthOp = clamp(0.4 + p.z*0.55, 0.22, 1);
+      const rad = 2.5*p.scale;
+      const c = gradColor(0.5 + p.y0*0.5);
+      droneSphere(ctx, p.x, p.y, rad, rgbOf(c), depthOp);
+    });
+    requestAnimationFrame(frame);
+  }
+
+  const obs = new IntersectionObserver((entries)=>{
+    entries.forEach(e=>{
+      const wasVisible = visible;
+      visible = e.isIntersecting;
+      if(visible && !wasVisible){ requestAnimationFrame(frame); }
+    });
+  }, {threshold:0.3});
+  obs.observe(canvas);
+  if(reducedMotion){
+    visible = true;
+    ctx.clearRect(0,0,W,H);
+    const S = Math.min(W,H)*0.34, focal=3.0;
+    drones.forEach(v=>{
+      const r = rotate(v, 0.6, angleX);
+      const scale = focal/(focal-r[2]);
+      const x=W/2+r[0]*S*scale, y=H/2+r[1]*S*scale;
+      const c = gradColor(0.5+v[1]*0.5);
+      droneSphere(ctx, x, y, 2.5*scale, rgbOf(c), 1);
+    });
+  }
+})();
+</script>
+</body>
+</html>
