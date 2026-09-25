@@ -8,20 +8,19 @@ const PUBLIC=new Set(['','index.html','entry.js','gate.css','beta-assets.js','pr
  'studio-config.js','account/client.js','account/messages.js','workspace/api.js',
  'vendor/supabase-auth-2.117.1.js','vendor/SUPABASE-AUTH-LICENSE.txt']);
 const BASE=new URL('./',self.location.href);
-// Transport fix 2026-09-24: a module graph must not fan out into dozens of
-// concurrent Lambda invocations. This queue is shared by this worker's tabs.
 const SIGNING_CONCURRENCY=2;
 const SIGNING_ATTEMPTS=4;
 const TRANSIENT_STATUS=new Set([429,500,502,503,504]);
+const METADATA_BATCH_LIMIT=32;
+const METADATA_BATCH_MS=12;
 let signingActive=0;
 const signingQueue=[];
+const metadataQueues=new Map();
 async function withSigningSlot(task){
  if(signingActive>=SIGNING_CONCURRENCY)await new Promise(resolve=>signingQueue.push(resolve));
  else signingActive++;
  try{return await task();}
  finally{
-  // Hand the occupied slot directly to the oldest waiter; new requests must
-  // not overtake it between promise resolution and continuation.
   const next=signingQueue.shift();if(next)next();else signingActive--;
  }
 }
@@ -41,18 +40,25 @@ async function getToken(clientId,refresh=false){
  return null;
 }
 const denied=(message,status=403)=>new Response(message,{status,headers:{'Content-Type':'text/plain','Cache-Control':'no-store'}});
-async function signedMetadata(event,path){
+function validMetadata(meta){return !!meta&&typeof meta.url==='string'&&typeof meta.type==='string'&&typeof meta.sha256==='string';}
+function normalizeMetadata(paths,data){
+ const assets={};
+ if(paths.length===1&&validMetadata(data)){assets[paths[0]]=data;return {ok:true,status:200,assets};}
+ if(data?.build!==BUILD||!data.assets||typeof data.assets!=='object')return {ok:false,status:502};
+ for(const path of paths){const meta=data.assets[path];if(!validMetadata(meta))return {ok:false,status:502};assets[path]=meta;}
+ return {ok:true,status:200,assets};
+}
+async function responseCode(response){try{const data=await response.clone().json();return data?.code||data?.errorCode||data?.error_code||null;}catch{return null;}}
+async function signedResponse(event,payload){
  const request=async token=>{
   const controller=new AbortController();
   const timer=setTimeout(()=>controller.abort(),35000);
   try{return await fetch(API,{method:'POST',credentials:'omit',redirect:'error',cache:'no-store',signal:controller.signal,
-   headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},body:JSON.stringify({path,build:BUILD})});}
+   headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},body:JSON.stringify({...payload,build:BUILD})});}
   finally{clearTimeout(timer);}
  };
  let refreshed=false;
  for(let attempt=0;attempt<SIGNING_ATTEMPTS;attempt++){
-  // Acquire a current token after waiting for a slot and again after backoff.
-  // Queued requests must not retain a token from before sign-out.
   let token=await getToken(event.clientId);if(!token)return denied('Sign in to Studio',401);
   let response;
   try{
@@ -64,22 +70,80 @@ async function signedMetadata(event,path){
     response=await request(token);
    }
   }catch(error){
-   // A failed CORS preflight is exposed to the worker as a network error.
    if(attempt===SIGNING_ATTEMPTS-1)throw error;
    response=undefined;
   }
   if(response&&(!TRANSIENT_STATUS.has(response.status)||attempt===SIGNING_ATTEMPTS-1))return response;
   if(response?.body)await response.body.cancel();
-  // Keep the slot during backoff so retries cannot create a second burst.
   await new Promise(resolve=>setTimeout(resolve,750*2**attempt+Math.random()*250));
  }
 }
+async function requestMetadata(event,paths){
+ const payload=paths.length===1?{path:paths[0]}:{paths};
+ const response=await withSigningSlot(()=>signedResponse(event,payload));
+ if(response.ok){
+  try{return normalizeMetadata(paths,await response.json());}
+  catch{return {ok:false,status:502};}
+ }
+ if(paths.length>1&&response.status===404&&(await responseCode(response))==='NOT_FOUND'){
+  const assets={};
+  for(const path of paths){
+   const single=await requestMetadata(event,[path]);
+   if(!single.ok)return single;
+   assets[path]=single.assets[path];
+  }
+  return {ok:true,status:200,assets};
+ }
+ return {ok:false,status:response.status};
+}
+function uniquePending(queue){const seen=new Set();for(const entry of queue.entries)seen.add(entry.path);return seen.size;}
+function takeMetadataBatch(queue){
+ const selected=[],remaining=[],seen=new Set();
+ for(const entry of queue.entries){
+  if(seen.has(entry.path)||seen.size<METADATA_BATCH_LIMIT){selected.push(entry);seen.add(entry.path);}
+  else remaining.push(entry);
+ }
+ queue.entries=remaining;
+ return selected;
+}
+function scheduleMetadataFlush(key,queue,delay=METADATA_BATCH_MS){
+ if(queue.timer!==null)return;
+ queue.timer=setTimeout(()=>flushMetadataQueue(key),delay);
+}
+async function flushMetadataQueue(key){
+ const queue=metadataQueues.get(key);if(!queue||queue.flushing)return;
+ if(queue.timer!==null){clearTimeout(queue.timer);queue.timer=null;}
+ const entries=takeMetadataBatch(queue);
+ if(!entries.length){metadataQueues.delete(key);return;}
+ queue.flushing=true;
+ const paths=[...new Set(entries.map(entry=>entry.path))];
+ const context={clientId:entries[0].clientId};
+ try{
+  const result=await requestMetadata(context,paths);
+  for(const entry of entries)entry.resolve(result.ok?{ok:true,meta:result.assets[entry.path]}:{ok:false,status:result.status});
+ }catch{
+  for(const entry of entries)entry.resolve({ok:false,status:503});
+ }finally{
+  queue.flushing=false;
+  if(queue.entries.length)scheduleMetadataFlush(key,queue,0);
+  else metadataQueues.delete(key);
+ }
+}
+function queuedMetadata(event,path){return new Promise(resolve=>{
+ const key=event.clientId||'window';
+ let queue=metadataQueues.get(key);
+ if(!queue){queue={entries:[],timer:null,flushing:false};metadataQueues.set(key,queue);}
+ queue.entries.push({clientId:event.clientId,path,resolve});
+ if(queue.flushing)return;
+ if(uniquePending(queue)>=METADATA_BATCH_LIMIT){if(queue.timer!==null){clearTimeout(queue.timer);queue.timer=null;}flushMetadataQueue(key);}
+ else scheduleMetadataFlush(key,queue);
+});}
 async function asset(event,path){
  try{
   if(event.request.method!=='GET')return denied('Method not allowed',405);
-  const response=await withSigningSlot(()=>signedMetadata(event,path));
-  if(!response.ok)return denied('Studio access is required or the editor needs reloading.',response.status);
-  const meta=await response.json(),url=new URL(meta.url);
+  const signed=await queuedMetadata(event,path);
+  if(!signed.ok)return denied('Studio access is required or the editor needs reloading.',signed.status);
+  const meta=signed.meta,url=new URL(meta.url);
   if(url.protocol!=='https:'||url.username||url.password||url.hostname!=='skysculpt-studio-library-207208119139-eu-north-1.s3.eu-north-1.amazonaws.com')return denied('Invalid asset storage',502);
   const object=await fetch(url,{mode:'cors',credentials:'omit',redirect:'error',cache:'no-store'});
   if(!object.ok)return denied('Unable to load editor asset',502);
