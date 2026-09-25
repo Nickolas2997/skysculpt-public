@@ -3,6 +3,32 @@ import {workspaceAPI} from './workspace/api.js?v=0.30.1';
 import {authMessage} from './account/messages.js?v=0.30.1';
 import {studioConfig} from './studio-config.js?v=0.30.1';
 import {installPrivateAssets} from './beta-assets.js';
+// Startup v2. Exact static module URLs for private build beta-031-9c4a290c813fdfff.
+// These are hints, not public copies: the worker still authorizes and verifies
+// every private response. Keep query strings aligned with the private imports.
+const EDITOR_MODULES=[
+ './app.js?v=0.30.1','./workspace/library.js?v=0.30.1','./show.js?v=0.30.1',
+ './account/ui.js?v=0.30.1','./three-d/examples.js?v=0.30.1','./three-d/photo-client.js',
+ './camera.js','./compat.js','./three-d/ui.js?v=0.30.1','./three-d/ai-client.js?v=0.30.1',
+ './text-formation.js','./tool-help.js?v=0.30.1','./text-fonts.js','./engine.js',
+ './formation.js','./photo.js','./calculation.js','./calculation-client.js','./fleet.js',
+ './examples.js','./connections.js','./show-editor.js?v=0.30.1','./history.js',
+ './scene-store.js?v=0.30.1','./timeline.js','./three-d/aws-client.js?v=0.30.1',
+ './three-d/samples.js','./uniform.js','./text-topology.js','./text-spacing.js',
+ './spatial.js','./three-d/model.js','./three-d/formation.js','./lineart.js','./logo.js',
+ './tool-help.js','./three-d/visible-contours.js','./three-d/photo-color.js',
+ './three-d/geometry.js','./structured-lines.js'
+];
+function preloadEditorModules(){
+ if(!document.createElement('link').relList?.supports?.('modulepreload'))return;
+ const fragment=document.createDocumentFragment();
+ for(const path of EDITOR_MODULES){
+  const href=new URL(path,import.meta.url).href;
+  if(Array.from(document.querySelectorAll('link[rel="modulepreload"]')).some(link=>link.href===href))continue;
+  const link=document.createElement('link');link.rel='modulepreload';link.href=href;link.crossOrigin='anonymous';fragment.append(link);
+ }
+ document.head.append(fragment);
+}
 const root=document.querySelector('#app');
 const params=new URLSearchParams(location.search);
 let invite=params.get('invite_token'),inviteType=params.get('type'),needsPassword=false;
@@ -77,22 +103,32 @@ async function start(){
   if(needsPassword||isPasswordRecovery()){passwordGate();return;}
   if(mode==='request'&&!adminView){gate();return;}
   root.innerHTML=panel('<h1>Checking your access…</h1>');
-  const access=await workspaceAPI('beta-status');
-  if(access.user?.id!==session.user.id)throw Error('The account could not be verified.');
   if(adminView){
+   const access=await workspaceAPI('beta-status');
+   if(access.user?.id!==session.user.id)throw Error('The account could not be verified.');
    if(!access.admin)throw Object.assign(Error('This page requires the SkySculpt administrator account.'),{code:'ADMIN_REQUIRED'});
    const {showAdmin}=await import('./beta-admin.js');await showAdmin(root,panel,signout);startedId=session.user.id;return;
   }
-  if(!access.approved)throw Object.assign(Error('Your account does not currently have Studio access. SkySculpt must approve access before you can enter.'),{code:'BETA_ACCESS_REQUIRED'});
-  const verified=await workspaceAPI('session');
+  // The session endpoint freshly verifies identity and private-beta approval.
+  // Registering the public transport can overlap that check; no private asset
+  // is requested until both succeed and the account is checked again below.
+  const [verified]=await Promise.all([workspaceAPI('session'),installPrivateAssets()]);
   if(verified.user?.id!==session.user.id||verified.privateBeta!==true)throw Error('Private access has not been enabled on the server.');
-  await installPrivateAssets();
-  await Promise.all([loadStyle('./style.css?v=0.31'),loadStyle('./skysculpt.css?v=0.31')]);
-  const latest=await auth.getSession();if(latest.data.session?.user.id!==session.user.id){location.reload();return;}
+  const current=await auth.getSession();if(current.error)throw current.error;
+  if(current.data.session?.user.id!==session.user.id){location.reload();return;}
+  root.innerHTML=panel('<h1>Opening Studio…</h1>');
+  // Schedule CSS first, then the complete static graph in the same turn so
+  // the worker can batch requests without waiting for each import generation.
+  // Modulepreload prepares modules but does not evaluate the editor.
+  const styles=Promise.all([loadStyle('./style.css?v=0.31'),loadStyle('./skysculpt.css?v=0.31')]);
+  preloadEditorModules();
+  await styles;
+  const latest=await auth.getSession();if(latest.error)throw latest.error;
+  if(latest.data.session?.user.id!==session.user.id){location.reload();return;}
   await import('./app.js?v=0.30.1');
   document.querySelector('link[href^="./gate.css"]')?.remove();
   startedId=session.user.id;blocked=false;
-  if(access.admin){const link=document.createElement('a');link.href='./?admin=1';link.textContent='Manage access';link.style.cssText='position:fixed;right:16px;bottom:12px;z-index:10000;padding:7px 12px;background:#1a2028;border:1px solid #52606c;border-radius:8px;font:13px system-ui;color:#d6f97a';document.body.append(link);}
+  if(verified.admin){const link=document.createElement('a');link.href='./?admin=1';link.textContent='Manage access';link.style.cssText='position:fixed;right:16px;bottom:12px;z-index:10000;padding:7px 12px;background:#1a2028;border:1px solid #52606c;border-radius:8px;font:13px system-ui;color:#d6f97a';document.body.append(link);}
   // Revocation also closes an already open editor. Every protected API request
   // independently checks approval; this timer is only a UI convenience.
   let checking=false;
