@@ -2,7 +2,7 @@
  * Reconstructed responses preserve the original same-origin base URL for module
  * imports, CSS fonts and workers. Editor code is never saved to an offline cache.
  */
-const BUILD='beta-031-760d098a876b334c';
+const BUILD='beta-031-be24147e397c77cb';
 const API='https://vz58nljdjj.execute-api.eu-north-1.amazonaws.com/default/imagetomesh?studio=1&action=editor-asset';
 const PUBLIC=new Set(['','index.html','entry.js','gate.css','beta-assets.js','private-worker.js','beta-admin.js',
  'studio-config.js','account/client.js','account/messages.js','workspace/api.js',
