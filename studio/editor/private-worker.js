@@ -111,11 +111,15 @@ function scheduleMetadataFlush(key,queue,delay=METADATA_BATCH_MS){
  queue.timer=setTimeout(()=>flushMetadataQueue(key),delay);
 }
 async function flushMetadataQueue(key){
- const queue=metadataQueues.get(key);if(!queue||queue.flushing)return;
+ const queue=metadataQueues.get(key);if(!queue)return;
  if(queue.timer!==null){clearTimeout(queue.timer);queue.timer=null;}
+ // SKYSCULPT_STARTUP_PARALLEL_V1: one tab may use both existing signing slots.
+ // Keep batches <=32 and obtain fresh authorization for every batch. No cache.
+ if(queue.active>=SIGNING_CONCURRENCY)return;
  const entries=takeMetadataBatch(queue);
- if(!entries.length){metadataQueues.delete(key);return;}
- queue.flushing=true;
+ if(!entries.length){if(!queue.active)metadataQueues.delete(key);return;}
+ queue.active++;
+ if(queue.entries.length&&queue.active<SIGNING_CONCURRENCY)scheduleMetadataFlush(key,queue,0);
  const paths=[...new Set(entries.map(entry=>entry.path))];
  const context={clientId:entries[0].clientId};
  try{
@@ -124,17 +128,17 @@ async function flushMetadataQueue(key){
  }catch{
   for(const entry of entries)entry.resolve({ok:false,status:503});
  }finally{
-  queue.flushing=false;
+  queue.active--;
   if(queue.entries.length)scheduleMetadataFlush(key,queue,0);
-  else metadataQueues.delete(key);
+  else if(!queue.active)metadataQueues.delete(key);
  }
 }
 function queuedMetadata(event,path){return new Promise(resolve=>{
  const key=event.clientId||'window';
  let queue=metadataQueues.get(key);
- if(!queue){queue={entries:[],timer:null,flushing:false};metadataQueues.set(key,queue);}
+ if(!queue){queue={entries:[],timer:null,active:0};metadataQueues.set(key,queue);}
  queue.entries.push({clientId:event.clientId,path,resolve});
- if(queue.flushing)return;
+ if(queue.active>=SIGNING_CONCURRENCY)return;
  if(uniquePending(queue)>=METADATA_BATCH_LIMIT){if(queue.timer!==null){clearTimeout(queue.timer);queue.timer=null;}flushMetadataQueue(key);}
  else scheduleMetadataFlush(key,queue);
 });}

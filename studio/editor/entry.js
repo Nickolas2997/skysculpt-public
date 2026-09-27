@@ -3,7 +3,7 @@ import {workspaceAPI} from './workspace/api.js?v=0.30.1';
 import {authMessage} from './account/messages.js?v=0.30.1';
 import {studioConfig} from './studio-config.js?v=0.30.1';
 import {installPrivateAssets} from './beta-assets.js';
-// Startup v2. Exact static module URLs for private build beta-031-9c4a290c813fdfff.
+// Startup v3. Complete static module graph, including image privacy and scene saves.
 // These are hints, not public copies: the worker still authorizes and verifies
 // every private response. Keep query strings aligned with the private imports.
 const EDITOR_MODULES=[
@@ -17,7 +17,8 @@ const EDITOR_MODULES=[
  './three-d/samples.js','./uniform.js','./text-topology.js','./text-spacing.js',
  './spatial.js','./three-d/model.js','./three-d/formation.js','./lineart.js','./logo.js',
  './tool-help.js','./three-d/visible-contours.js','./three-d/photo-color.js',
- './three-d/geometry.js','./structured-lines.js'
+ './three-d/geometry.js','./structured-lines.js',
+ './three-d/image-privacy.js','./workspace/scene-saves.js'
 ];
 function preloadEditorModules(){
  if(!document.createElement('link').relList?.supports?.('modulepreload'))return;
@@ -37,6 +38,27 @@ const adminView=params.get('admin')==='1';
 let mode=params.get('requestAccess')==='1'?'request':'signin',starting=false,startedId=null,busy=false,email='',blocked=false;
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const panel=(body,extra='')=>`<main class="studio-gate ${extra}"><a class="gate-brand" href="../../">SkySculpt <span>Studio</span></a><section>${body}<small class="gate-version">Private preview · WEB 0.31</small></section></main>`;
+// SKYSCULPT_STABLE_OPENING_V1
+// The editor's global .studio-gate rules must not restyle the loading screen.
+// Keep one loading view through access checking, stylesheet and module loading.
+function showStartup(step){
+ let host=root.querySelector('[data-studio-startup]');
+ if(!host){
+  host=document.createElement('div');host.setAttribute('data-studio-startup','');
+  const view=host.attachShadow({mode:'open'});
+  view.innerHTML=`<style>
+   :host{all:initial;display:block;color-scheme:dark;font:16px/1.5 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#e3eaf0;background:#101216}
+   *,*::before,*::after{box-sizing:border-box}
+   main{min-height:100dvh;display:grid;place-content:center;gap:24px;padding:32px 20px;background:radial-gradient(ellipse at top,#183639 0,transparent 70%),#101216}
+   a{font-size:28px;color:#d6f97a;text-decoration:none;outline-offset:4px}a span{color:#dbe6ec}
+   section{width:min(520px,calc(100vw - 40px));padding:30px;background:#1a2028;border:1px solid #38424c;border-radius:20px}
+   h1{font-size:30px;line-height:1.2;margin:12px 0 20px}p{margin:0;color:#c0cbd4}
+   small{display:block;margin-top:20px;font-size:13px;color:#9eadb9}
+  </style><main><a href="../../">SkySculpt <span>Studio</span></a><section aria-busy="true"><h1>Opening Studio…</h1><p role="status" aria-live="polite"></p><small>Private preview · WEB 0.31</small></section></main>`;
+  root.replaceChildren(host);
+ }
+ host.shadowRoot.querySelector('[role="status"]').textContent=step;
+}
 const status=message=>{const el=root.querySelector('#gate-status');if(el)el.textContent=message;};
 async function signout(){const {error}=await auth.signOut({scope:'local'});if(error){status(authMessage(error));return;}location.href='./';}
 function gate(message=''){
@@ -102,7 +124,7 @@ async function start(){
   if(!session){gate();return;}
   if(needsPassword||isPasswordRecovery()){passwordGate();return;}
   if(mode==='request'&&!adminView){gate();return;}
-  root.innerHTML=panel('<h1>Checking your access…</h1>');
+  showStartup('Checking your access…');
   if(adminView){
    const access=await workspaceAPI('beta-status');
    if(access.user?.id!==session.user.id)throw Error('The account could not be verified.');
@@ -116,7 +138,7 @@ async function start(){
   if(verified.user?.id!==session.user.id||verified.privateBeta!==true)throw Error('Private access has not been enabled on the server.');
   const current=await auth.getSession();if(current.error)throw current.error;
   if(current.data.session?.user.id!==session.user.id){location.reload();return;}
-  root.innerHTML=panel('<h1>Opening Studio…</h1>');
+  showStartup('Loading your workspace…');
   // Schedule CSS first, then the complete static graph in the same turn so
   // the worker can batch requests without waiting for each import generation.
   // Modulepreload prepares modules but does not evaluate the editor.
