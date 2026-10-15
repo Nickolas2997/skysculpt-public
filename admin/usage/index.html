@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="el">
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow"><meta name="referrer" content="no-referrer">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self' https://lgldvqtoaqstfwenybsh.supabase.co https://vz58nljdjj.execute-api.eu-north-1.amazonaws.com; base-uri 'none'; form-action 'none'; object-src 'none'">
+<title>SkySculpt · Χρήση πελατών</title><link rel="stylesheet" href="style.css?v=0.2.0">
+<body>
+<header><a href="/">SkySculpt<span> / διαχείριση</span></a><span class="badge">Ιδιωτική πρόσβαση</span></header>
+<main>
+ <div class="intro"><p class="eyebrow">ΧΡΗΣΗ ΠΕΛΑΤΩΝ</p><h1>Η χρήση, σε ένα σημείο.</h1><p>Εργασίες AI, αποθηκευμένα σχέδια και εταιρικά όρια.</p></div>
+ <section id="login" class="upload" hidden><div><h2>Σύνδεση διαχειριστή</h2><p>Χρησιμοποίησε τον ίδιο λογαριασμό με το SkySculpt Studio.</p></div><form id="signin"><label>Email<input name="email" type="email" autocomplete="username" required></label><label>Κωδικός<input name="password" type="password" autocomplete="current-password" required></label><button class="button" type="submit">Σύνδεση</button></form></section>
+ <div class="actions"><span id="account"></span><div><button id="retry">Επανάληψη</button> <button id="signout" hidden>Αποσύνδεση</button></div></div>
+ <p id="status" role="status" aria-live="polite">Έλεγχος σύνδεσης…</p>
+ <div id="dashboard" hidden>
+  <div class="filters"><label>Πελάτης<input id="search" placeholder="Email, ID ή εταιρεία" type="search"></label><label>Μήνας εργασιών AI (UTC)<input id="month" type="month"></label><button id="clear">Όλοι οι μήνες</button><button id="refresh">Ανανέωση</button></div>
+  <div class="cards"><article><span>Καταγεγραμμένες AI εργασίες</span><strong id="ai">0</strong></article><article><span>Χρήστες με AI εργασίες</span><strong id="users">0</strong></article><article><span>Αποτυχημένες AI εργασίες</span><strong id="failed">0</strong></article><article><span>Αποθηκευμένα στοιχεία βιβλιοθήκης</span><strong id="library">0</strong></article></div>
+  <aside>Αυτά είναι τα ήδη καταγεγραμμένα στοιχεία, όχι όλα τα Generate. Δεν υπάρχει πλήρης καταγραφή τελικής επιτυχίας, κόστους AI, cache ή διάκρισης online/Blender. Τα αποθηκευμένα στοιχεία και τα εταιρικά όρια είναι τρέχοντα και δεν φιλτράρονται ανά μήνα. Ο χώρος σε GB δεν μετριέται ακόμη.</aside>
+  <h2>Χρήση ανά πελάτη</h2><div class="table"><table><thead><tr><th>Πελάτης</th><th>Εταιρεία</th><th>AI εργασίες</th><th>Αποτυχημένες</th><th>Μη επιβεβαιωμένες υποβολές</th><th>Σκηνές βιβλιοθήκης</th><th>Projects</th></tr></thead><tbody id="people"></tbody></table></div>
+  <h2>Εταιρικά όρια · τρέχουσα περίοδος</h2><p class="muted">Το Used μετρά δεσμευμένες μετατροπές, όχι επιβεβαιωμένα αποτελέσματα. Στη λειτουργία χωρίς quota μπορεί να μην ενημερώνεται.</p><div class="table"><table><thead><tr><th>Εταιρεία</th><th>Used</th><th>Όριο</th><th>Πρόσβαση</th></tr></thead><tbody id="companies"></tbody></table></div>
+ </div>
+ <footer>SkySculpt Usage · v0.2 · Τα στοιχεία φορτώνονται μόνο μετά τον έλεγχο διαχειριστή. Δεν αποθηκεύονται στη συσκευή.</footer>
+</main><script type="module" src="app.js?v=0.2.0"></script>
+</body></html>
