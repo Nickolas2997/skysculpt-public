@@ -1,0 +1,25 @@
+*{box-sizing:border-box}html,body{margin:0;height:100%;background:#000;overflow:hidden}
+.ssv{position:fixed;inset:0;color:#e9eef5;font:14px/1.4 Inter,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;--n:0}
+.ssv-map{position:absolute;inset:0;filter:brightness(calc(1 - var(--n)*.78)) saturate(calc(1 - var(--n)*.55)) contrast(calc(1 + var(--n)*.18))}.ssv-map>*{width:100%;height:100%}
+.ssv-night{position:absolute;inset:0;pointer-events:none;z-index:4;opacity:var(--n);background:linear-gradient(180deg,rgba(10,22,60,.55),rgba(14,30,70,.35) 45%,rgba(4,8,20,.2));mix-blend-mode:multiply}
+.ssv-night:after{content:"";position:absolute;inset:0;background:radial-gradient(ellipse at 50% 55%,transparent 45%,rgba(0,0,6,.65))}
+.ssv-stars{position:absolute;left:0;right:0;top:0;height:45%;pointer-events:none;z-index:4;opacity:calc(var(--n)*.9);background-image:radial-gradient(1px 1px at 12% 18%,#fff9 50%,transparent 51%),radial-gradient(1px 1px at 27% 8%,#fff8 50%,transparent 51%),radial-gradient(1.4px 1.4px at 44% 22%,#fffb 50%,transparent 51%),radial-gradient(1px 1px at 63% 12%,#fff7 50%,transparent 51%),radial-gradient(1px 1px at 78% 26%,#fff8 50%,transparent 51%),radial-gradient(1.2px 1.2px at 88% 6%,#fff9 50%,transparent 51%),radial-gradient(1px 1px at 6% 34%,#fff6 50%,transparent 51%),radial-gradient(1px 1px at 52% 4%,#fff7 50%,transparent 51%);-webkit-mask-image:linear-gradient(#000,transparent);mask-image:linear-gradient(#000,transparent)}
+.ssv-fx{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:5}
+.ssv-wait[hidden]{display:none}.ssv-wait{position:absolute;inset:0;display:grid;place-items:center;color:#9aa6b6;z-index:3;padding:24px;text-align:center}
+.ssv-info{position:absolute;left:16px;top:12px;z-index:10;text-shadow:0 1px 3px #000;pointer-events:none;max-width:60%}.ssv-info b{display:block;font-size:16px}.ssv-info span{color:#9aa6b6;font-size:12px}
+.ssv button,.ssv select,.ssv input{font:inherit;color:#e9eef5;background:#1d232c;border:1px solid rgba(255,255,255,.14);border-radius:8px;padding:8px 9px}
+.ssv button{cursor:pointer}.ssv button[aria-pressed=true]{border-color:#d6f97a;color:#d6f97a}.ssv button:disabled{opacity:.45;cursor:default}
+.ssv-toggle{position:absolute;top:12px;right:12px;z-index:12;width:40px}
+.ssv-panel{position:absolute;top:60px;right:12px;width:280px;max-height:calc(100% - 140px);overflow:auto;background:rgba(16,20,28,.9);border:1px solid rgba(255,255,255,.14);border-radius:12px;padding:14px;z-index:10;backdrop-filter:blur(6px)}
+.ssv-panel[hidden]{display:none}.ssv-panel h2{font-size:15px;margin:0}
+.ssv-panel label{display:block;margin:10px 0 4px;color:#9aa6b6;font-size:12px}.ssv-panel select,.ssv-panel input[type=range],.ssv-panel>button{width:100%}
+.ssv-panel input[type=range]{padding:0;accent-color:#d6f97a}
+.ssv-checks label{display:flex;gap:7px;align-items:center;margin:5px 0;color:#e9eef5;font-size:13px}.ssv-checks input{margin:0;accent-color:#d6f97a;padding:0}
+.ssv-small{color:#9aa6b6;font-size:12px;margin-top:4px}.ssv-msg{color:#ffcf9c;font-size:12px;margin-top:8px;min-height:1em}
+.ssv-brand{margin-top:12px;color:#9aa6b6;font-size:11px}.ssv-brand a{color:#d6f97a}
+.ssv-bar{position:absolute;left:12px;right:12px;bottom:14px;display:flex;gap:8px;align-items:center;background:rgba(16,20,28,.9);border:1px solid rgba(255,255,255,.14);border-radius:12px;padding:8px 10px;z-index:10}
+.ssv-bar input[type=range]{flex:1;min-width:60px;padding:0;accent-color:#d6f97a}.ssv-bar button{min-width:40px;padding:7px 9px}.ssv-time{color:#9aa6b6;white-space:nowrap;font-variant-numeric:tabular-nums}
+.ssv-pad{position:absolute;left:12px;bottom:72px;z-index:11;display:flex;gap:5px;align-items:center;background:rgba(16,20,28,.9);border:1px solid rgba(255,255,255,.14);border-radius:10px;padding:6px 8px;flex-wrap:wrap}
+.ssv-pad[hidden]{display:none}.ssv-pad span{color:#9aa6b6;font-size:12px;margin-right:4px}.ssv-pad button{min-width:36px;padding:6px 8px;touch-action:none}
+.ssv-hint{position:absolute;left:12px;right:12px;bottom:74px;text-align:center;color:#9aa6b6;font-size:12px;pointer-events:none;z-index:9;transition:opacity .6s;text-shadow:0 1px 3px #000}
+@media(max-width:760px){.ssv-panel{left:12px;width:auto;top:60px;max-height:45%}.ssv-hint{display:none}.ssv-bar [data-view],.ssv-bar .speed{display:none}}
