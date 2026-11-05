@@ -19,8 +19,8 @@ async function start() {
   const info = await r.json().catch(() => ({}));
   if (!r.ok) return fail(info.error || 'This show could not be opened.');
   const meta = info.meta, site = {...info.site}, all = meta.all, n = meta.drones, Fr = meta.frames, duration = meta.duration;
-  document.title = 'SkySculptAi · Drone show';
-  $('#name').textContent = 'SkySculptAi'; $('#stats').textContent = `${n} drones · ${fmt(duration)}`;
+  document.title = 'SkySculptAI · Drone show';
+  $('#name').textContent = 'SkySculptAI'; $('#stats').textContent = `${n} drones · ${fmt(duration)}`;
   const gz = new Uint8Array(await (await fetch(info.dataUrl, {credentials: 'omit'})).arrayBuffer());
   const raw = new Uint8Array(await new Response(new Blob([gz]).stream().pipeThrough(new DecompressionStream('gzip'))).arrayBuffer());
   const P = new Int16Array(raw.buffer, 0, Fr * n * 3), C = raw.subarray(Fr * n * 6);
