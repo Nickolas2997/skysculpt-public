@@ -1,13 +1,13 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="robots" content="noindex,nofollow"><meta name="referrer" content="strict-origin-when-cross-origin"><meta name="theme-color" content="#000000">
-<title>Drone show · SkySculpt</title>
+<title>SkySculptAi · Drone show</title>
 <link rel="icon" href="../site-icon-32.png" type="image/png" sizes="32x32">
 <link rel="stylesheet" href="./viewer.css?v=1">
 </head><body>
 <div id="app" class="ssv">
  <div class="ssv-map"></div><div class="ssv-wait" id="wait">Loading the show…</div><div class="ssv-night"></div><div class="ssv-stars"></div><canvas class="ssv-fx"></canvas>
- <div class="ssv-info"><b id="name">Drone show</b><span id="stats"></span></div>
+ <div class="ssv-info"><b id="name">SkySculptAi</b><span id="stats"></span></div>
  <button class="ssv-toggle" id="toggle" aria-expanded="true" title="Show or hide the settings">☰</button>
  <aside class="ssv-panel" id="panel" aria-label="View settings">
   <h2>View</h2>
@@ -18,11 +18,11 @@
   <label>Map</label><select id="mode"><option value="SATELLITE">Satellite</option><option value="HYBRID">Satellite + labels</option></select>
   <label>Audience</label><button id="audview">Audience view</button><div class="ssv-small" id="aud"></div>
   <div class="ssv-msg" id="msg"></div>
-  <div class="ssv-brand">Made with <a href="https://skysculptai.com" target="_blank" rel="noopener">SkySculpt</a></div>
+  <div class="ssv-brand">Made with <a href="https://skysculptai.com" target="_blank" rel="noopener">SkySculptAi</a></div>
  </aside>
  <div class="ssv-pad" id="pad" hidden role="group" aria-label="Audience camera"><span>Audience camera</span><button data-pad="tl" title="Turn left">⟲</button><button data-pad="left" title="Move left">◀</button><button data-pad="up" title="Move up">▲</button><button data-pad="down" title="Move down">▼</button><button data-pad="right" title="Move right">▶</button><button data-pad="tr" title="Turn right">⟳</button><button data-pad="exit">Exit</button></div>
  <div class="ssv-hint" id="hint">Drag to move the map · Right-drag or Ctrl-drag to rotate and tilt · Scroll or pinch to zoom · Space plays</div>
  <div class="ssv-bar"><button id="play" aria-label="Play">▶</button><input id="seek" type="range" min="0" max="1000" value="0" aria-label="Show time"><span class="ssv-time" id="time">0:00</span><button class="speed" id="speed" title="Playback speed">1×</button><button data-view="front">Front</button><button data-view="side">Side</button><button data-view="top">Top</button><button data-view="3d">3D</button><button id="full" title="Full screen">⤢</button></div>
 </div>
-<script type="module" src="./viewer.js?v=1"></script>
+<script type="module" src="./viewer.js?v=2"></script>
 </body></html>
